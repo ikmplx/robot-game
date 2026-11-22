@@ -3,6 +3,6 @@
   "short_name": "Рубеж",
   "start_url": "./",
   "display": "standalone",
-  "background_color": "#10101d",
-  "theme_color": "#10101d"
+  "background_color": "#10192a",
+  "theme_color": "#10192a"
 }

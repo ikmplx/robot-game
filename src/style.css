@@ -2,12 +2,12 @@
   color-scheme: dark;
   font-family: "Segoe UI", system-ui, sans-serif;
   color: #f2f3ff;
-  background: #10101d;
+  background: #10192a;
   font-synthesis: none;
   --muted: #b5b6cc;
-  --panel: #171827f2;
-  --border: #494a64;
-  --cyan: #92f4e9;
+  --panel: #172338f2;
+  --border: #5e637c;
+  --cyan: #a3dbf7;
   --gold: #ffcc75;
 }
 
@@ -53,7 +53,7 @@ body {
 }
 
 .mission {
-  border-inline-start: 3px solid var(--cyan);
+  border-inline-start: 3px solid var(--gold);
   padding: 0.25rem 0.75rem;
   text-shadow: 0 1px 10px #141429;
 }

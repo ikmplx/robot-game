@@ -13,12 +13,12 @@ import type { Solid } from "./platformer";
 import { bossArena, maze, type XYZ } from "./route";
 
 export function createAnnex(scene: Scene, workshop: Workshop, solids: Solid[]) {
-  const { box, material, shadows } = workshop;
-  const stone = material("Twilight stone", "#354155");
-  const cap = material("Maze wall cap", "#52677F");
-  const tile = material("Slate tile", "#59697B");
-  const alternateTile = material("Blue slate tile", "#4D5F75");
-  const metal = material("Arena brass", "#B98652");
+  const { box, material, shadows, textures } = workshop;
+  const stone = material("Twilight stone", "#34466F", 0, textures.stone);
+  const cap = material("Maze wall cap", "#5B7091", 0, textures.stone);
+  const tile = material("Slate tile", "#637898", 0, textures.stone);
+  const alternateTile = material("Blue slate tile", "#4A608D", 0, textures.stone);
+  const metal = material("Arena brass", "#B98652", 0.15);
   const wax = material("Candle wax", "#E9BA76");
   const wick = material("Candle wick", "#53402C");
   const flameColor = material("Candle flame", "#FFC063", 0.95);

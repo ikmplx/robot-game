@@ -40,11 +40,11 @@ function horizontalDistance(a: Vector3, b: Vector3) {
 
 export function createPlatformerScene(engine: Engine, input: GameInput) {
   const scene = new Scene(engine);
-  const roomBackground = Color4.FromHexString("#5D6B77FF");
+  const roomBackground = Color4.FromHexString("#213251FF");
   const darkBackground = new Color4(0, 0, 0, 1);
   scene.clearColor = roomBackground.clone();
   scene.fogMode = Scene.FOGMODE_LINEAR;
-  scene.fogColor = Color3.FromHexString("#697783");
+  scene.fogColor = Color3.FromHexString("#263958");
   scene.fogStart = 20;
   scene.fogEnd = 80;
 
@@ -54,15 +54,16 @@ export function createPlatformerScene(engine: Engine, input: GameInput) {
   camera.maxZ = 110;
 
   const ambientLight = new HemisphericLight("Ambient light", Vector3.Up(), scene);
-  ambientLight.intensity = 0.78;
-  ambientLight.groundColor = Color3.FromHexString("#62788F");
+  ambientLight.intensity = 0.84;
+  ambientLight.groundColor = Color3.FromHexString("#677CAC");
   const sun = new DirectionalLight("Key light", new Vector3(0.46, -1, 0.3), scene);
   sun.position.set(-12, 22, 12);
   sun.intensity = 0.95;
-  sun.diffuse = Color3.FromHexString("#FDE8D8");
+  sun.diffuse = Color3.FromHexString("#FFE4BC");
   const shadows = new ShadowGenerator(2048, sun);
   shadows.usePoissonSampling = true;
-  shadows.bias = 0.001;
+  shadows.bias = 0.0015;
+  shadows.normalBias = 0.025;
   shadows.setDarkness(0.26);
 
   const solids: Solid[] = [];
@@ -74,7 +75,7 @@ export function createPlatformerScene(engine: Engine, input: GameInput) {
   const { avatar, drawScout, monster } = createActors(scene, workshop);
   const fights = arenas.map((zone, index) => ({
     zone,
-    enemies: zone.enemies.map(([x, z]) => monster("Arena monster", new Vector3(x, zone.top, z))),
+    enemies: zone.enemies.map(([x, z]) => monster("Paper crane", new Vector3(x, zone.top, z))),
     setBarrier: level.fightBarriers[index],
     cleared: false,
   }));
@@ -96,7 +97,9 @@ export function createPlatformerScene(engine: Engine, input: GameInput) {
   const position = player.position;
   const cameraFocus = spawn.clone();
   const cameraTarget = Vector3.Zero();
-  let cameraHeight = 6.95;
+  let cameraHeight = 5.55;
+  let cameraBack = 8.4;
+  let cameraSide = 0;
 
   let accumulator = 0;
   let clock = 0;
@@ -135,7 +138,9 @@ export function createPlatformerScene(engine: Engine, input: GameInput) {
   function respawn() {
     player.reset(checkpoint);
     cameraFocus.copyFrom(checkpoint);
-    cameraHeight = 6.95;
+    cameraHeight = 5.55;
+    cameraBack = 8.4;
+    cameraSide = 0;
     mazeView = 0;
     mazeDarkness = 0;
     health = 3;
@@ -508,14 +513,14 @@ export function createPlatformerScene(engine: Engine, input: GameInput) {
     }
     if (upperCargo.placed === upperCargo.crates.length) return "Спуститесь по тросу к двери";
     if (upperFight.cleared) return `Верхний склад · Ящики ${upperCargo.placed} / ${upperCargo.crates.length}`;
-    if (checkpoint === upperFight.zone.checkpoint) return "Победите монстров на втором этаже";
+    if (checkpoint === upperFight.zone.checkpoint) return "Победите бумажных журавликов на втором этаже";
     if (elevators[1].used) return "Второй этаж · Перепрыгните по платформам";
     if (cables[0].used) return "Дойдите до лифта на второй этаж";
     if (shelfFight.cleared) return "Переберитесь на другую сторону по тросу";
-    if (elevators[0].used) return "Победите монстров на полке";
+    if (elevators[0].used) return "Победите бумажных журавликов на полке";
     if (floorCargo.placed === floorCargo.crates.length) return "Дойдите до лифта на полку";
     if (floorFight.cleared) return `Нижний склад · Ящики ${floorCargo.placed} / ${floorCargo.crates.length}`;
-    if (checkpoint === floorFight.zone.checkpoint) return "Победите монстров на полу";
+    if (checkpoint === floorFight.zone.checkpoint) return "Победите бумажных журавликов на полу";
     return "Перепрыгните по кубам";
   }
 
@@ -533,7 +538,7 @@ export function createPlatformerScene(engine: Engine, input: GameInput) {
     drawScout(clock, moving && !ride && !finished, player.grounded,
       swing / attackSeconds, invulnerable > 0, ride?.kind === "zipline");
     for (const fight of fights) for (const enemy of fight.enemies) enemy.draw(clock);
-    guardian.draw(clock);
+    guardian.draw(clock, position);
     chest.draw(chestProgress);
     for (const [index, { coin, position: center }] of level.coins.entries()) {
       if (!coin.isEnabled()) continue;
@@ -549,16 +554,24 @@ export function createPlatformerScene(engine: Engine, input: GameInput) {
     scene.fogMode = fullyDark ? Scene.FOGMODE_NONE : Scene.FOGMODE_LINEAR;
     scene.fogStart = 20 + 90 * darkness;
     scene.fogEnd = 80 + 90 * darkness;
-    ambientLight.intensity = 0.78 * (1 - darkness);
+    ambientLight.intensity = 0.84 * (1 - darkness);
     sun.intensity = 0.95 * (1 - darkness);
     Vector3.LerpToRef(cameraFocus, position, follow, cameraFocus);
     const narrow = engine.getRenderWidth() / engine.getRenderHeight() < 0.95;
     camera.fovMode = narrow ? FreeCamera.FOVMODE_HORIZONTAL_FIXED : FreeCamera.FOVMODE_VERTICAL_FIXED;
     const viewingCargo = crateCourses.some(({ x, top, front, back, halfWidth }) => Math.abs(position.y - top) < 2.3
       && position.z >= front - 2 && position.z <= back + 0.5 && Math.abs(position.x - x) < halfWidth + 0.4);
-    cameraHeight += ((inMaze ? 15.75 : viewingCargo ? 11.25 : 6.95) - cameraHeight) * follow;
+    const atMazeEntrance = position.z > gate.z + 0.85 && position.z < maze.front
+      && Math.abs(position.x - gate.x) < 3.3 && Math.abs(position.y - gate.y) < 2.3;
+    const atArena = position.z >= bossArena.checkpoint.z && position.z < bossArena.back
+      && Math.abs(position.x - bossArena.x) < bossArena.halfWidth && Math.abs(position.y - bossArena.top) < 2.3;
+    const height = inMaze ? 15.75 : viewingCargo ? 11.25 : atArena ? 9.8 : atMazeEntrance ? 9 : 5.55;
+    const back = atMazeEntrance ? 5.7 : atArena ? 8.75 : 8.4;
+    cameraHeight += (height - cameraHeight) * follow;
+    cameraBack += (back - cameraBack) * follow;
+    cameraSide += ((atArena ? 2.5 : 0) - cameraSide) * follow;
     const direction = ride?.kind === "zipline" ? Math.sin(facing) : 0;
-    camera.position.set(cameraFocus.x - direction * 2.5, cameraFocus.y + cameraHeight, cameraFocus.z - 9.25 + 6.25 * mazeView);
+    camera.position.set(cameraFocus.x - direction * 2.5 + cameraSide, cameraFocus.y + cameraHeight, cameraFocus.z - cameraBack + 5.4 * mazeView);
     cameraTarget.set(cameraFocus.x + direction * 2.4, cameraFocus.y + 0.42, cameraFocus.z + 4.1 - 2.6 * mazeView);
     camera.setTarget(cameraTarget);
 

@@ -1,4 +1,5 @@
 import type { ShadowGenerator } from "@babylonjs/core/Lights/Shadows/shadowGenerator";
+import type { BaseTexture } from "@babylonjs/core/Materials/Textures/baseTexture";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
@@ -8,14 +9,19 @@ import { CreateLineSystem } from "@babylonjs/core/Meshes/Builders/linesBuilder";
 import { CreateTorus } from "@babylonjs/core/Meshes/Builders/torusBuilder";
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import type { Scene } from "@babylonjs/core/scene";
+import { furnishLibrary } from "./library";
+import { createLibraryTextures } from "./library-textures";
 import { pushSolid, solidsOverlap, type Solid } from "./platformer";
 import { arenas, coinSpots, crateCourses, decks, gate, hazard, jumpBlocks, lifts, room, ziplines, type XYZ } from "./route";
 
 export function createWorkshop(scene: Scene, shadows: ShadowGenerator) {
-  function material(name: string, color: string, glow = 0) {
+  const textures = createLibraryTextures(scene);
+
+  function material(name: string, color: string, glow = 0, texture?: BaseTexture) {
     const result = new StandardMaterial(name, scene);
     result.diffuseColor = Color3.FromHexString(color);
-    result.specularColor.setAll(0.1);
+    result.specularColor.setAll(0.09);
+    result.diffuseTexture = texture ?? null;
     result.emissiveColor = result.diffuseColor.scale(glow);
     return result;
   }
@@ -29,21 +35,21 @@ export function createWorkshop(scene: Scene, shadows: ShadowGenerator) {
     return mesh;
   }
 
-  return { box, material, shadows };
+  return { box, material, shadows, textures };
 }
 
 export type Workshop = ReturnType<typeof createWorkshop>;
 
 export function createLevel(scene: Scene, workshop: Workshop, solids: Solid[]) {
-  const { box, material, shadows } = workshop;
-  const shell = material("Deep teal", "#28535D");
-  const slab = material("Painted metal", "#548A94");
-  const inset = material("Recessed steel", "#263852");
-  const silver = material("Aluminum", "#B8D1D4");
-  const cyan = material("Cyan LEDs", "#42DAD5", 0.6);
-  const amber = material("Amber LEDs", "#F8B15A", 0.5);
-  const red = material("Barrier LEDs", "#F8616B", 0.65);
-  const darkLight = material("Unpowered LED", "#4B6072", 0.1);
+  const { box, material, shadows, textures } = workshop;
+  const shell = material("Indigo lacquered oak", "#334C76", 0.1, textures.wood);
+  const slab = material("Blue cloth-covered platforms", "#6284B5", 0.12, textures.linen);
+  const inset = material("Dark library joinery", "#323C60", 0.08, textures.wood);
+  const silver = material("Satin brass trim", "#D5AD6D", 0.17);
+  const cyan = material("Enchanted blue guides", "#70D8F1", 0.45);
+  const amber = material("Amber guides", "#F8B15A", 0.5);
+  const red = material("Barrier lanterns", "#F8616B", 0.65);
+  const darkLight = material("Unlit star", "#4B6072", 0.1);
   const gold = material("Coin gold", "#F5A840", 0.3);
   const goldFace = material("Coin face", "#FFE192", 0.45);
 
@@ -71,11 +77,14 @@ export function createLevel(scene: Scene, workshop: Workshop, solids: Solid[]) {
   const roomDepth = room.back - room.front;
   const roomCenter = (room.back + room.front) / 2;
 
-  const floor = material("Room floor", "#9A847A");
-  const wall = material("Room walls", "#9DA8AC");
-  const molding = material("Skirting", "#556B79");
-  const wood = material("Furniture wood", "#977057");
-  const woodEdge = material("Furniture edges", "#684C44");
+  const floorGrain = textures.wood.clone();
+  floorGrain.uScale = 14;
+  floorGrain.vScale = 45;
+  const floor = material("Polished library floor", "#76625F", 0.12, floorGrain);
+  const wall = material("Library walls", "#233450", 0.15);
+  const molding = material("Library molding", "#354566", 0.13, textures.wood);
+  const wood = material("Golden walnut", "#9D734D", 0.12, textures.wood);
+  const woodEdge = material("Walnut furniture edges", "#5E453A", 0.11, textures.wood);
   placedBlock("Room floor", [room.halfWidth * 2, 0.8, roomDepth], [0, -0.4, roomCenter], floor);
   for (const z of [room.front, room.back]) {
     placedBlock("End wall", [room.halfWidth * 2 + 1, room.height, 0.65], [0, room.height / 2, z], wall);
@@ -124,8 +133,9 @@ export function createLevel(scene: Scene, workshop: Workshop, solids: Solid[]) {
     box("Overhead strip", [18, 0.14, 0.34], [0, 28, z], silver);
   }
 
-  const bookCovers = [material("Rust book cover", "#A7503C"), shell, material("Navy book cover", "#454B69")];
-  const paper = material("Book paper", "#D6C5A7");
+  const bookCovers = [material("Ochre book cover", "#9A683D", 0.15, textures.linen), shell,
+    material("Navy book cover", "#4A5D8E", 0.15, textures.linen)];
+  const paper = material("Book paper", "#E8D3AE", 0.1, textures.paper);
   const binding = material("Book binding marks", "#DEA975");
   for (const [index, cover] of bookCovers.entries()) {
     const width = 4.05 - index * 0.27;
@@ -145,7 +155,7 @@ export function createLevel(scene: Scene, workshop: Workshop, solids: Solid[]) {
     hitbox([width, 0.8, 3.82], [x, y, z]);
   }
 
-  const mugMaterial = material("Terracotta glaze", "#B65B41");
+  const mugMaterial = material("Cobalt ceramic glaze", "#39689D", 0.13, textures.stone);
   const mug = CreateCylinder("Oversized mug", { height: 2.75, diameterTop: 2.65, diameterBottom: 2.28, tessellation: 32 }, scene);
   mug.position.set(5.65, 1.375, 1.82);
   mug.material = mugMaterial;
@@ -156,20 +166,20 @@ export function createLevel(scene: Scene, workshop: Workshop, solids: Solid[]) {
   surface.material = woodEdge;
   const mugRim = CreateTorus("Mug rim", { diameter: 2.55, thickness: 0.145, tessellation: 36 }, scene);
   mugRim.position.set(5.65, 2.77, 1.82);
-  mugRim.material = mugMaterial;
+  mugRim.material = silver;
   const handle = CreateTorus("Mug handle", { diameter: 1.75, thickness: 0.24, tessellation: 24 }, scene);
   handle.rotation.x = Math.PI / 2;
   handle.position.set(6.94, 1.43, 1.64);
   handle.material = mugMaterial;
 
-  const danger = material("Hazard surface", "#994045", 0.17);
+  const danger = material("Hazard surface", "#57344E", 0.16, textures.stone);
   const dangerGrid = material("Hazard edge", "#EF6A53", 0.55);
   const hazardWidth = room.halfWidth * 2 - 0.69;
   box("Dangerous floor", [hazardWidth, 0.026, hazard.back - hazard.front],
     [0, 0.018, (hazard.front + hazard.back) / 2], danger).receiveShadows = true;
   for (const z of [hazard.front + 0.085, hazard.back - 0.085]) {
     box("Hazard boundary", [hazardWidth, 0.033, 0.1], [0, 0.044, z], dangerGrid);
-    for (let x = -26; x <= 26; x += 1.25) {
+    for (let x = -26; x <= 26; x += 1.65) {
       box("Warning stripe", [0.7, 0.035, 0.18], [x, 0.044, z + (z < hazard.front + 1 ? 0.27 : -0.27)], dangerGrid)
         .rotation.y = -0.48;
     }
@@ -183,7 +193,7 @@ export function createLevel(scene: Scene, workshop: Workshop, solids: Solid[]) {
   }
   const hazardMesh = CreateLineSystem("Danger floor grid", { lines: hazardLines }, scene);
   hazardMesh.color = Color3.FromHexString("#F08A75");
-  hazardMesh.alpha = 0.43;
+  hazardMesh.alpha = 0.23;
 
   for (const [x, top, z, size] of jumpBlocks) {
     const upper = top > 2;
@@ -466,6 +476,8 @@ export function createLevel(scene: Scene, workshop: Workshop, solids: Solid[]) {
     face.material = goldFace;
     return { coin, position, minimumY: onJumpCube ? y - 0.1 : -Infinity };
   }
+
+  furnishLibrary(scene, workshop);
 
   const coins = [
     ...coinSpots.map(([x, y, z]) => createCoin(x, y, z, false)),

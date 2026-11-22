@@ -1,11 +1,14 @@
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { CreateCylinder } from "@babylonjs/core/Meshes/Builders/cylinderBuilder";
+import { FresnelParameters } from "@babylonjs/core/Materials/fresnelParameters";
+import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { CreateDisc } from "@babylonjs/core/Meshes/Builders/discBuilder";
+import { CreateTube } from "@babylonjs/core/Meshes/Builders/tubeBuilder";
 import { CreateTorus } from "@babylonjs/core/Meshes/Builders/torusBuilder";
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import type { Scene } from "@babylonjs/core/scene";
 import type { Workshop } from "./level";
-import { bossArena } from "./route";
+import { bossArena, type XYZ } from "./route";
+import { ellipsoid, foldedMesh, ovalBetween, pivot } from "./visual-mesh";
 
 const maxHealth = 6;
 const slamRadius = 3.05;
@@ -13,50 +16,97 @@ type Phase = "idle" | "approach" | "windup" | "charge" | "recovery" | "defeated"
 type Attack = "slam" | "charge";
 
 export function createGuardian(scene: Scene, workshop: Workshop) {
-  const { box, material, shadows } = workshop;
-  const armor = material("Guardian armor", "#394152");
-  const brass = material("Guardian brass", "#BA7751");
-  const dark = material("Guardian joints", "#272436");
-  const eye = material("Guardian light", "#E69B57", 0.55);
-  const danger = material("Guardian windup", "#FF7859", 0.72);
-  const weakness = material("Guardian exposed core", "#81EDE5", 0.78);
+  const { box, material, textures } = workshop;
+  const spirit = material("Moonlit spectral fur", "#72ABE8", 0.49, textures.spirit);
+  const mane = material("Pale spectral fur", "#AFDCF8", 0.55, textures.spirit);
+  const injured = material("Spectral hit flash", "#FFF4AD", 0.9);
+  const innerEar = material("Blue inner ears", "#3E5A96", 0.25);
+  const socket = material("Spectral eye sockets", "#223865", 0.23);
+  const eye = material("Guardian golden eyes", "#FFCF75", 0.9);
+  const danger = material("Guardian windup", "#FF8861", 0.8);
+  const weakness = material("Guardian exposed core", "#95FFE9", 0.8);
+  const vapor = material("Spectral vapor", "#7DCCFF", 0.85);
   const telegraph = material("Guardian attack area", "#FD6445", 0.7);
   telegraph.alpha = 0.35;
   telegraph.disableLighting = true;
   telegraph.backFaceCulling = false;
-
-  const root = new TransformNode("Guardian", scene);
-  const rig = new TransformNode("Guardian rig", scene);
-  rig.parent = root;
-  const torso = box("Guardian torso", [1.66, 1.24, 0.93], [0, 1.73, 0], armor, rig);
-  box("Guardian chest housing", [1.27, 0.82, 0.19], [0, 1.74, 0.48], brass, rig);
-  box("Guardian chest panel", [0.91, 0.59, 0.18], [0, 1.74, 0.57], dark, rig);
-  const core = CreateCylinder("Guardian core", { height: 0.12, diameter: 0.45, tessellation: 6 }, scene);
-  core.parent = rig;
-  core.position.set(0, 1.74, 0.69);
-  core.rotation.x = Math.PI / 2;
-  const head = box("Guardian helmet", [1.09, 0.56, 0.94], [0, 2.61, 0.07], armor, rig);
-  box("Guardian brow", [1.08, 0.12, 0.21], [0, 2.73, 0.57], brass, rig);
-  const visor = box("Guardian visor", [0.75, 0.12, 0.1], [0, 2.58, 0.56], eye, rig);
-  shadows.addShadowCaster(torso, false);
-  shadows.addShadowCaster(head, false);
-  const arms = [-1, 1].map((side) => {
-    const arm = new TransformNode("Guardian arm", scene);
-    arm.parent = rig;
-    arm.position.set(side * 1.02, 2.05, 0);
-    box("Guardian shoulder", [0.65, 0.62, 0.74], [0, -0.14, 0], brass, arm);
-    box("Guardian upper arm", [0.45, 0.73, 0.49], [0, -0.55, 0.03], dark, arm);
-    box("Guardian gauntlet", [0.67, 0.74, 0.78], [0, -0.93, 0.17], armor, arm);
-    box("Guardian gauntlet light", [0.52, 0.1, 0.06], [0, -0.87, 0.58], eye, arm);
-    return arm;
+  const rimLight = new FresnelParameters({
+    leftColor: Color3.FromHexString("#92DCFF"),
+    rightColor: Color3.Black(),
+    bias: 0.16,
+    power: 2.8,
   });
-  const legs = [-1, 1].map((side) => {
-    const leg = new TransformNode("Guardian leg", scene);
-    leg.parent = rig;
-    leg.position.set(side * 0.42, 1, 0);
-    box("Guardian shin", [0.46, 0.74, 0.57], [0, -0.35, 0], dark, leg);
-    box("Guardian boot", [0.63, 0.32, 0.87], [0, -0.81, 0.1], armor, leg);
-    return leg;
+  for (const surface of [spirit, mane]) {
+    surface.alpha = 0.91;
+    surface.needDepthPrePass = true;
+    surface.emissiveFresnelParameters = rimLight;
+  }
+  vapor.alpha = 0.24;
+  innerEar.backFaceCulling = false;
+
+  const root = new TransformNode("Ghost cat guardian", scene);
+  const rig = pivot("Spectral cat rig", root);
+  const chest = ellipsoid("Cat chest", rig, spirit, [0, 1.48, 0.38], [1.83, 1.68, 1.69]);
+  const haunches = ellipsoid("Cat haunches", rig, spirit, [0, 1.24, -0.72], [1.72, 1.62, 2.26]);
+  ellipsoid("Pale chest ruff", rig, mane, [0, 1.5, 0.93], [1.22, 1.24, 0.62]);
+  const head = pivot("Cat head", rig, [0, 2.16, 0.87]);
+  ellipsoid("Cat face", head, spirit, [0, 0.13, 0.17], [1.82, 1.45, 1.45]);
+  ellipsoid("Cat chin", head, mane, [0, -0.2, 0.47], [1.1, 0.63, 0.88]);
+  ellipsoid("Cat nose", head, socket, [0, 0.023, 0.972], [0.259, 0.168, 0.095]);
+  const eyes = [-1, 1].map((side) => {
+    const outer: XYZ = [side * 0.88, 0.42, 0.24], inner: XYZ = [side * 0.22, 0.67, 0.2];
+    const tip: XYZ = [side * 0.83, 1.18, 0.2], back: XYZ = [side * 0.62, 0.55, -0.33];
+    const earRim: XYZ = [side * 0.72, 0.97, 0.31];
+    foldedMesh(scene, "Cat pointed ear", head, [spirit, innerEar], [
+      [[outer, tip, back], [tip, inner, back], [inner, outer, back],
+        [outer, earRim, tip], [earRim, inner, tip]],
+      [[outer, inner, earRim]],
+    ]);
+    ellipsoid("Cat muzzle", head, mane, [side * 0.2, -0.092, 0.794], [0.48, 0.39, 0.4]);
+    for (let line = 0; line < 3; line++) {
+      ovalBetween("Spectral whisker", head, mane, [side * 0.34, -0.107, 0.893],
+        [side * (0.97 - line * 0.04), 0.047 - line * 0.15, 0.76], 0.033);
+    }
+    const eyesocket = ellipsoid("Cat eye socket", head, socket, [side * 0.397, 0.241, 0.753], [0.477, 0.296, 0.17]);
+    eyesocket.rotation.z = side * 0.24;
+    const iris = ellipsoid("Glowing cat eye", head, eye, [side * 0.395, 0.247, 0.841], [0.335, 0.19, 0.08]);
+    iris.rotation.z = side * 0.24;
+    ellipsoid("Cat slit pupil", head, socket, [side * 0.395, 0.247, 0.884], [0.077, 0.158, 0.027]);
+    return iris;
+  });
+  const core = ellipsoid("Cat's spirit core", rig, eye, [0, 1.558, 1.269], [0.33, 0.38, 0.17]);
+  const setting = CreateTorus("Spirit seal", { diameter: 0.49, thickness: 0.045, tessellation: 24 }, scene);
+  setting.parent = rig;
+  setting.position.copyFrom(core.position);
+  setting.rotation.x = Math.PI / 2;
+  setting.material = mane;
+
+  const paws = [-1, 1].map((side) => {
+    const foreleg = pivot("Cat front leg", rig, [side * 0.557, 1.51, 0.71]);
+    ovalBetween("Cat foreleg", foreleg, spirit, [0, 0, 0], [side * 0.075, -0.9, 0.22], 0.54, 0.62);
+    ellipsoid("Cat forepaw", foreleg, mane, [side * 0.075, -0.945, 0.326], [0.605, 0.42, 0.749]);
+    for (const toe of [-1, 0, 1]) {
+      ellipsoid("Cat toe", foreleg, mane, [side * 0.075 + toe * 0.156, -0.958, 0.576], [0.182, 0.23, 0.272]);
+    }
+    const hindleg = pivot("Cat hind leg", rig, [side * 0.52, 0.96, -1.016]);
+    ellipsoid("Cat hind thigh", hindleg, spirit, [0, 0, 0], [0.76, 1.13, 1]);
+    ellipsoid("Cat hind paw", hindleg, mane, [0, -0.51, 0.17], [0.57, 0.39, 0.72]);
+    return { foreleg, hindleg };
+  });
+
+  const tail = pivot("Spectral cat tail", rig, [0, 1.29, -1.5]);
+  const path = [[0, 0, 0], [-0.16, 0.17, -0.4], [-0.53, 0.54, -0.68],
+    [-0.59, 1.01, -0.81], [-0.29, 1.38, -0.9], [0.17, 1.55, -0.83], [0.52, 1.47, -0.73]]
+    .map(([x, y, z]) => new Vector3(x, y, z));
+  const tailMesh = CreateTube("Tapered ghost tail", {
+    path, tessellation: 16, radiusFunction: (i) => 0.27 - i * 0.036,
+  }, scene);
+  tailMesh.parent = tail;
+  tailMesh.material = spirit;
+  const mist = Array.from({ length: 5 }, (_, i) => {
+    const wisp = ellipsoid("Floating spectral wisp", rig, vapor, [0, 0, 0], [0.34, 0.17, 0.86]);
+    wisp.rotation.z = 0.25 * (i - 2);
+    return wisp;
   });
 
   const circle = CreateDisc("Slam warning floor", { radius: slamRadius, tessellation: 44 }, scene);
@@ -157,21 +207,34 @@ export function createGuardian(scene: Scene, workshop: Workshop) {
       if (health === 0) phase = "defeated";
       return true;
     },
-    draw(clock: number) {
+    draw(clock: number, player: Vector3) {
       root.setEnabled(phase !== "defeated");
       const winding = phase === "windup";
       const weak = phase === "recovery";
+      const distance = Math.hypot(root.position.x - player.x, root.position.z - player.z);
+      const proximity = Math.max(0, Math.min(1, (distance - 0.65) / 1.5));
+      const bodyOpacity = 0.49 + proximity * 0.42;
+      spirit.alpha = mane.alpha = injured.alpha = bodyOpacity;
       const walking = phase === "approach" || phase === "charge";
       const stride = walking ? Math.sin(clock * 12) * 0.53 : 0;
       core.material = weak ? weakness : winding ? danger : eye;
-      visor.material = weak ? weakness : winding ? danger : eye;
-      torso.material = hurtFlash > 0 ? brass : armor;
-      rig.position.y = weak ? -0.22 : Math.abs(stride) * 0.12;
-      for (const [index, arm] of arms.entries()) {
+      core.scaling.setAll(weak ? 0.43 : 0.26);
+      for (const iris of eyes) iris.material = winding ? danger : eye;
+      chest.material = haunches.material = hurtFlash > 0 ? injured : spirit;
+      rig.position.y = (weak ? -0.19 : 0) + Math.sin(clock * 3) * 0.095 + Math.abs(stride) * 0.1;
+      rig.rotation.x = winding && next === "slam" ? -0.28 : phase === "charge" ? 0.14 : 0;
+      head.rotation.x = weak ? 0.08 : winding ? -0.12 : 0.035 * Math.sin(clock * 4.8);
+      tail.rotation.y = Math.sin(clock * 3.2) * 0.3;
+      for (const [index, { foreleg, hindleg }] of paws.entries()) {
         const side = index === 0 ? -1 : 1;
-        arm.rotation.x = winding ? (next === "slam" ? -2.48 : -0.88) : weak ? 0.38 : phase === "charge" ? -0.93 : stride * side;
-        arm.rotation.z = side * (weak ? 0.46 : 0.05);
-        legs[index].rotation.x = -stride * side;
+        foreleg.rotation.x = winding ? (next === "slam" ? -0.92 : -0.33)
+          : phase === "charge" ? -0.54 + stride * side : stride * side;
+        hindleg.rotation.x = -stride * side * 0.65;
+      }
+      for (const [index, wisp] of mist.entries()) {
+        const angle = clock * 0.74 + index * Math.PI * 2 / mist.length;
+        wisp.position.set(Math.cos(angle) * 1.1, 0.22 + Math.sin(angle * 1.8) * 0.16, Math.sin(angle) * 1.48);
+        wisp.rotation.y = -angle;
       }
       const showCircle = winding && next === "slam";
       circle.setEnabled(showCircle);
