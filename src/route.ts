@@ -27,7 +27,7 @@ export type CrateCourse = {
   exitMessage: string;
 };
 
-export const room = { halfWidth: 28, front: -13, back: 225, height: 30 };
+export const room = { halfWidth: 28, front: -13, back: 294, height: 30 };
 export const spawn = new Vector3(0, 0, 0.25);
 export const hazard = { front: 6, back: 25 };
 
@@ -104,17 +104,46 @@ export const decks = [
   { name: "Door gallery", x: -15, width: 18, front: 203, back: 223, top: 15.4 },
 ];
 
-export const jumpBlocks: readonly XYZ[] = [
-  [0.5, 1.8, 8.5], [-0.65, 1.8, 12], [0.4, 1.8, 15.5], [1.7, 1.8, 19.1], [0.7, 1.8, 22.55],
-  [16.5, 18.35, 130.55], [15.4, 18.7, 134], [16.8, 18.45, 137.65], [17.7, 18.2, 141.1],
+export const jumpBlocks: readonly (readonly [x: number, top: number, z: number, size: number])[] = [
+  [0.45, 0.84, 8.45, 2.55], [-0.55, 1.1, 12.65, 2.45], [0.8, 0.95, 16.9, 2.45], [1.55, 0.72, 21, 2.5],
+  [16.5, 18.72, 130.35, 1.68], [14.1, 19.15, 133.2, 1.46], [15.95, 18.68, 136.2, 1.45],
+  [18.25, 19.45, 139.15, 1.38], [16.1, 19, 142.4, 1.38],
 ];
 
 export const gate = new Vector3(-15, 15.4, 216.5);
-export const goal = new Vector3(-15, 15.4, 220.2);
+
+const mazeRows = [
+  "###.###",
+  "#..A#.#",
+  "#.###.#",
+  "#...B.#",
+  "###.#.#",
+  "#...#.#",
+  "#.###.#",
+  "#C....#",
+  "##.##.#",
+  "#..D..#",
+  "###.###",
+];
+const mazeCell = 3.4;
+const mazeFront = 226;
+const mazeHalfWidth = mazeRows[0].length * mazeCell / 2;
+export const maze = {
+  rows: mazeRows, cell: mazeCell, front: mazeFront, back: mazeFront + mazeRows.length * mazeCell,
+  x: gate.x, top: gate.y, halfWidth: mazeHalfWidth,
+  checkpoint: new Vector3(gate.x, gate.y, 220.5),
+};
+
+export const bossArena = {
+  front: 269, back: 285, halfWidth: mazeHalfWidth, x: gate.x, top: gate.y,
+  checkpoint: new Vector3(gate.x, gate.y, 267.1),
+  home: new Vector3(gate.x, gate.y, 278.2),
+};
+export const goal = new Vector3(gate.x, gate.y, 289);
 
 export const coinSpots: readonly XYZ[] = [
   [0, 0, 2.2], [0.3, 0, 4.9],
-  ...jumpBlocks,
+  ...jumpBlocks.map(([x, y, z]): XYZ => [x, y, z]),
   [0, 0, 27.8], [0, 0, 31.2], [-2.5, 0, 38.2], [-5.3, 0, 42], [-7, 0, 46.6], [-7, 0, 50],
   [-7, 0, 53.55], [-7, 0, 67.5], [-7, 0, 71.8], [-7, 0, 75],
   [-7, 10.8, 78.6], [-7, 10.8, 82.7], [-8.7, 10.8, 90], [-10, 10.8, 93.4],
@@ -122,5 +151,6 @@ export const coinSpots: readonly XYZ[] = [
   [16, 18, 121], [16.2, 18, 124.2], [16.45, 18, 127.2],
   [17.5, 18, 145.1], [16.4, 18, 148.5], [14, 18, 154.5], [14, 18, 159.4],
   [14, 18, 162.9], [14, 18, 181.6], [12, 18, 185.2], [10, 18, 187.35],
-  [-13, 15.4, 207.5], [-14.2, 15.4, 211], [-15, 15.4, 214.8], [-15, 15.4, 218.9],
+  [-13, 15.4, 207.5], [-14.2, 15.4, 211], [-15, 15.4, 214.8], [-15, 15.4, 222.2],
+  [-15, 15.4, 266.5], [-15, 15.4, 287.1],
 ];

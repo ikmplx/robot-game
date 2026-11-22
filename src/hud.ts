@@ -5,6 +5,8 @@ type View = {
   coins: number;
   totalCoins: number;
   objective: string;
+  bossHealth: number | null;
+  bossMaxHealth: number;
   interaction: string;
   feedback: string;
   finished: boolean;
@@ -17,6 +19,8 @@ export function createHud(actions: { unlockDoor: () => void; restart: () => void
   const coins = document.querySelector<HTMLElement>("#coins")!;
   const stars = document.querySelector<HTMLElement>("#stars")!;
   const objective = document.querySelector<HTMLElement>("#objective")!;
+  const bossHealth = document.querySelector<HTMLElement>("#boss-health")!;
+  const bossMeter = document.querySelector<HTMLProgressElement>("#boss-meter")!;
   const interact = document.querySelector<HTMLButtonElement>("#interact")!;
   const interactionLabel = interact.querySelector("span")!;
   const feedback = document.querySelector<HTMLElement>("#feedback")!;
@@ -115,6 +119,11 @@ export function createHud(actions: { unlockDoor: () => void; restart: () => void
         coins.setAttribute("aria-label", `Монеты: ${view.coins}`);
       }
       setText(objective, view.objective);
+      bossHealth.hidden = view.bossHealth === null;
+      if (view.bossHealth !== null && bossMeter.value !== view.bossHealth) {
+        bossMeter.max = view.bossMaxHealth;
+        bossMeter.value = view.bossHealth;
+      }
       setText(interactionLabel, view.interaction);
       setText(feedback, view.feedback);
       interact.hidden = !view.interaction;

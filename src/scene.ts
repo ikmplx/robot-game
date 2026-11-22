@@ -8,11 +8,13 @@ import { Color3, Color4 } from "@babylonjs/core/Maths/math.color";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { Scene } from "@babylonjs/core/scene";
 import { createActors } from "./actors";
+import { createAnnex } from "./annex";
+import { createGuardian } from "./boss";
 import { createHud } from "./hud";
 import type { GameInput } from "./input";
 import { createLevel, createWorkshop } from "./level";
 import { createPlayer, type Solid } from "./platformer";
-import { arenas, crateCourses, gate, goal, hazard, lifts, spawn, ziplines, type Arena } from "./route";
+import { arenas, bossArena, crateCourses, gate, goal, hazard, lifts, maze, spawn, ziplines, type Arena } from "./route";
 
 const step = 1 / 120;
 const attackSeconds = 0.34;
@@ -34,9 +36,13 @@ function horizontalDistance(a: Vector3, b: Vector3) {
 
 export function createPlatformerScene(engine: Engine, input: GameInput) {
   const scene = new Scene(engine);
-  scene.clearColor = Color4.FromHexString("#5D6B77FF");
+  const roomBackground = Color4.FromHexString("#5D6B77FF");
+  const darkBackground = Color4.FromHexString("#0D121BFF");
+  const roomFog = Color3.FromHexString("#697783");
+  const darkFog = Color3.FromHexString("#111827");
+  scene.clearColor = roomBackground.clone();
   scene.fogMode = Scene.FOGMODE_LINEAR;
-  scene.fogColor = Color3.FromHexString("#697783");
+  scene.fogColor = roomFog.clone();
   scene.fogStart = 20;
   scene.fogEnd = 80;
 
@@ -60,6 +66,8 @@ export function createPlatformerScene(engine: Engine, input: GameInput) {
   const solids: Solid[] = [];
   const workshop = createWorkshop(scene, shadows);
   const level = createLevel(scene, workshop, solids);
+  const annex = createAnnex(scene, workshop, solids);
+  const guardian = createGuardian(scene, workshop);
   const { avatar, drawScout, monster } = createActors(scene, workshop);
   const fights = arenas.map((zone, index) => ({
     zone,
@@ -98,6 +106,7 @@ export function createPlatformerScene(engine: Engine, input: GameInput) {
   let finished = false;
   let feedback = "";
   let feedbackTime = 0;
+  let darkness = 0;
 
   const hud = createHud({
     unlockDoor() { doorUnlocked = true; },
@@ -125,7 +134,21 @@ export function createPlatformerScene(engine: Engine, input: GameInput) {
       if (fight.cleared) continue;
       for (const enemy of fight.enemies) enemy.reset();
     }
+    if (!guardian.defeated) {
+      guardian.reset();
+      annex.setArenaEntrance(true);
+    }
     input.reset();
+  }
+
+  function takeDamage() {
+    if (invulnerable > 0) return false;
+    health--;
+    invulnerable = 0.9;
+    if (health > 0) return false;
+    respawn();
+    notify("Возвращение к контрольной точке");
+    return true;
   }
 
   function resetCrates(board: typeof floorCargo) {
@@ -141,6 +164,9 @@ export function createPlatformerScene(engine: Engine, input: GameInput) {
     doorUnlocked = false;
     doorProgress = 0;
     feedbackTime = 0;
+    darkness = 0;
+    annex.reset();
+    guardian.reset();
     for (const fight of fights) {
       fight.cleared = false;
       fight.setBarrier(true);
@@ -232,21 +258,35 @@ export function createPlatformerScene(engine: Engine, input: GameInput) {
     target.z = Math.max(zone.front + 0.55, Math.min(zone.back - 0.65, target.z + dz));
   }
 
+  function strikeInRange(target: Vector3, range: number) {
+    const distance = horizontalDistance(target, position);
+    const forward = (target.x - position.x) * Math.sin(facing) + (target.z - position.z) * Math.cos(facing);
+    return distance <= range && (distance <= 0.72 || forward >= distance * 0.21)
+      && Math.abs(target.y - position.y) <= 1.15;
+  }
+
   function attack() {
     swing = attackSeconds;
+    if (annex.strike(position, strikeInRange)) {
+      const exitOpen = annex.litCount === annex.totalCandles;
+      notify(exitOpen ? "Все свечи горят. Решётка открылась" : "Свеча зажжена");
+    }
+    if (guardian.strike(strikeInRange) && guardian.defeated) {
+      annex.setArenaExit(true);
+      annex.setArenaEntrance(true);
+      notify("Хранитель повержен");
+    }
     const fight = activeFight();
     if (!fight) return;
     for (const enemy of fight.enemies) {
       const target = enemy.root.position;
-      const distance = horizontalDistance(target, position);
-      const forward = (target.x - position.x) * Math.sin(facing) + (target.z - position.z) * Math.cos(facing);
-      if (enemy.health <= 0 || distance > 2.03 || (forward < distance * 0.21 && distance > 0.72)
-        || Math.abs(target.y - position.y) > 1.15) continue;
+      if (enemy.health <= 0 || !strikeInRange(target, 2.03)) continue;
 
       enemy.health -= 1;
       enemy.windup = 0;
       enemy.cooldown = 0.32;
       enemy.stagger = 0.25;
+      const distance = horizontalDistance(target, position);
       if (distance > 0.01) {
         const knockback = 0.43 / distance;
         moveEnemy(target, fight.zone, (target.x - position.x) * knockback, (target.z - position.z) * knockback);
@@ -281,15 +321,7 @@ export function createPlatformerScene(engine: Engine, input: GameInput) {
         enemy.windup = Math.max(0, enemy.windup - dt);
         if (enemy.windup === 0) {
           enemy.cooldown = 0.65;
-          if (distance < 1.45 && Math.abs(position.y - target.y) < 0.8 && invulnerable === 0) {
-            health -= 1;
-            invulnerable = 0.9;
-            if (health === 0) {
-              respawn();
-              notify("Возвращение к контрольной точке");
-              return;
-            }
-          }
+          if (distance < 1.45 && Math.abs(position.y - target.y) < 0.8 && takeDamage()) return;
         }
       } else if (distance < 1.06 && enemy.cooldown === 0) {
         enemy.windup = 0.42;
@@ -333,6 +365,16 @@ export function createPlatformerScene(engine: Engine, input: GameInput) {
 
   function updateCheckpoint() {
     if (!player.grounded) return;
+    if (checkpoint === cables[1].end && doorUnlocked && position.y === gate.y && position.z >= gate.z + 1.05) {
+      checkpoint = maze.checkpoint;
+      notify("За дверью — Свечной зал");
+    }
+    if (checkpoint === maze.checkpoint && annex.litCount === annex.totalCandles && position.y === bossArena.top
+      && position.z >= maze.back + 1.25) {
+      checkpoint = bossArena.checkpoint;
+      health = 3;
+      notify("Хранитель ждёт впереди");
+    }
     for (const { zone } of [floorFight, upperFight]) {
       const previous = zone.top === 0 ? spawn : elevators[1].track.arrival;
       if (checkpoint === previous && position.y === zone.top && position.z >= zone.front
@@ -347,6 +389,15 @@ export function createPlatformerScene(engine: Engine, input: GameInput) {
         checkpoint = course.restart;
       }
     }
+  }
+
+  function updateGuardian(dt: number) {
+    if (checkpoint !== bossArena.checkpoint || guardian.defeated) return;
+    if (!guardian.active && position.z > bossArena.front + 0.61 && position.y === bossArena.top) {
+      guardian.start();
+      annex.setArenaEntrance(false);
+    }
+    if (guardian.update(dt, position)) takeDamage();
   }
 
   function updateCargo() {
@@ -387,6 +438,7 @@ export function createPlatformerScene(engine: Engine, input: GameInput) {
       updateCheckpoint();
       updateMonsters(dt);
       updateCargo();
+      updateGuardian(dt);
     }
     for (const { coin, position: center } of level.coins) {
       if (coin.isEnabled() && horizontalDistance(position, center) < 0.8
@@ -396,13 +448,20 @@ export function createPlatformerScene(engine: Engine, input: GameInput) {
       }
     }
 
-    if (player.grounded && doorUnlocked && position.y === goal.y
+    if (player.grounded && guardian.defeated && position.y === goal.y
       && horizontalDistance(position, goal) < 0.95) finished = true;
   }
 
   function objective() {
     if (finished) return "Выход достигнут";
-    if (doorUnlocked) return "Пройдите к выходу";
+    if (guardian.defeated) return "Хранитель повержен · Пройдите к выходу";
+    if (guardian.active) return guardian.hint;
+    if (checkpoint === bossArena.checkpoint) return "Пройдите к арене Хранителя";
+    if (checkpoint === maze.checkpoint) {
+      if (annex.litCount === annex.totalCandles) return "Свечной зал · Найдите открытую решётку";
+      return `Зажигайте свечи мечом · ${annex.litCount} / ${annex.totalCandles}`;
+    }
+    if (doorUnlocked) return "Пройдите в Свечной зал";
     if (ride) return ride.kind === "lift" ? "Лифт поднимается" : "Переправа по тросу";
     if (cables[1].used) {
       return hud.countStars() < 3 ? "Соберите 3 звезды для двери" : "Соберите мозаику у двери";
@@ -426,6 +485,7 @@ export function createPlatformerScene(engine: Engine, input: GameInput) {
     drawScout(clock, moving && !ride && !finished, player.grounded,
       swing / attackSeconds, invulnerable > 0, ride?.kind === "zipline");
     for (const fight of fights) for (const enemy of fight.enemies) enemy.draw(clock);
+    guardian.draw(clock);
     for (const [index, { coin, position: center }] of level.coins.entries()) {
       if (!coin.isEnabled()) continue;
       coin.rotation.y = clock * 2.25 + index * 0.4;
@@ -434,12 +494,21 @@ export function createPlatformerScene(engine: Engine, input: GameInput) {
     level.setDoor(doorProgress * doorProgress * (3 - 2 * doorProgress), hud.countStars());
 
     const follow = 1 - Math.exp(-dt * 8);
+    const inMaze = annex.isDark(position);
+    darkness += ((inMaze ? 1 : 0) - darkness) * follow;
+    Color4.LerpToRef(roomBackground, darkBackground, darkness, scene.clearColor);
+    Color3.LerpToRef(roomFog, darkFog, darkness, scene.fogColor);
+    ambientLight.intensity = 0.78 - 0.63 * darkness;
+    sun.intensity = 0.95 - 0.9 * darkness;
+    scene.fogStart = 20 - 10.5 * darkness;
+    scene.fogEnd = 80 - 52 * darkness;
+    annex.draw(position, clock, inMaze);
     Vector3.LerpToRef(cameraFocus, position, follow, cameraFocus);
     const narrow = engine.getRenderWidth() / engine.getRenderHeight() < 0.95;
     camera.fovMode = narrow ? FreeCamera.FOVMODE_HORIZONTAL_FIXED : FreeCamera.FOVMODE_VERTICAL_FIXED;
     const viewingCargo = crateCourses.some(({ x, top, front, back, halfWidth }) => Math.abs(position.y - top) < 2.3
       && position.z >= front - 2 && position.z <= back + 0.5 && Math.abs(position.x - x) < halfWidth + 0.4);
-    cameraHeight += ((viewingCargo ? 11.25 : 6.95) - cameraHeight) * follow;
+    cameraHeight += ((inMaze ? 9.45 : viewingCargo ? 11.25 : 6.95) - cameraHeight) * follow;
     const direction = ride?.kind === "zipline" ? Math.sin(facing) : 0;
     camera.position.set(cameraFocus.x - direction * 2.5, cameraFocus.y + cameraHeight, cameraFocus.z - 9.25);
     cameraTarget.set(cameraFocus.x + direction * 2.4, cameraFocus.y + 0.42, cameraFocus.z + 4.1);
@@ -448,6 +517,7 @@ export function createPlatformerScene(engine: Engine, input: GameInput) {
     const available = interaction();
     hud.update({
       health, coins: collected, totalCoins: level.coins.length, objective: objective(),
+      bossHealth: guardian.active ? guardian.health : null, bossMaxHealth: guardian.maxHealth,
       interaction: available ? prompts[available.kind] : "", feedback: feedbackTime > 0 && !finished ? feedback : "", finished,
     });
   }

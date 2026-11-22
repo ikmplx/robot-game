@@ -9,7 +9,7 @@ import { CreateTorus } from "@babylonjs/core/Meshes/Builders/torusBuilder";
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import type { Scene } from "@babylonjs/core/scene";
 import { pushSolid, solidsOverlap, type Solid } from "./platformer";
-import { arenas, coinSpots, crateCourses, decks, gate, goal, hazard, jumpBlocks, lifts, room, ziplines, type XYZ } from "./route";
+import { arenas, coinSpots, crateCourses, decks, gate, hazard, jumpBlocks, lifts, room, ziplines, type XYZ } from "./route";
 
 export function createWorkshop(scene: Scene, shadows: ShadowGenerator) {
   function material(name: string, color: string, glow = 0) {
@@ -185,9 +185,8 @@ export function createLevel(scene: Scene, workshop: Workshop, solids: Solid[]) {
   hazardMesh.color = Color3.FromHexString("#F08A75");
   hazardMesh.alpha = 0.43;
 
-  for (const [x, top, z] of jumpBlocks) {
+  for (const [x, top, z, size] of jumpBlocks) {
     const upper = top > 2;
-    const size = upper ? 2.28 : 1.95;
     const height = upper ? size : top;
     const block = placedBlock("Jump cube", [size, height, size], [x, top - height / 2, z], slab);
     shadows.addShadowCaster(block, false);
@@ -438,10 +437,6 @@ export function createLevel(scene: Scene, workshop: Workshop, solids: Solid[]) {
     light.rotation.z = Math.PI / 4;
     return light;
   });
-  const goalRing = CreateTorus("Exit pad", { diameter: 1.88, thickness: 0.095, tessellation: 40 }, scene);
-  goalRing.position.copyFrom(goal).y += 0.055;
-  goalRing.material = cyan;
-
   const coins = coinSpots.map(([x, y, z]) => {
     const position = new Vector3(x, y + 0.73, z);
     const coin = new TransformNode("Coin", scene);
