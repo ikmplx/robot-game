@@ -2,15 +2,31 @@
 <html lang="ru">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>3D-прототип</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#101c21" />
+    <link rel="manifest" href="/game.webmanifest" />
+    <title>Робот на платформе</title>
   </head>
   <body>
     <main class="viewport">
-      <canvas id="scene" aria-label="Тестовая трёхмерная сцена"></canvas>
+      <canvas id="scene" aria-label="Трёхмерная трасса с платформами"></canvas>
       <div class="overlay">
-        <h1>Тестовая сцена</h1>
-        <p class="controls">Перетащите, чтобы повернуть камеру</p>
+        <div>
+          <h1>Доберитесь до маяка</h1>
+          <p class="controls">WASD / стрелки · пробел — прыжок</p>
+        </div>
+        <div class="overlay-actions">
+          <button id="restart" type="button">Заново</button>
+          <button id="fullscreen" type="button" aria-label="На весь экран" title="На весь экран" hidden>
+            <span aria-hidden="true">⛶</span>
+          </button>
+          <p id="fullscreen-status" role="status"></p>
+        </div>
+      </div>
+      <p id="game-status" role="status">Загрузка…</p>
+      <div class="touch-controls">
+        <div id="stick" aria-hidden="true"><span></span></div>
+        <button id="jump" type="button">Прыжок</button>
       </div>
       <p id="scene-error" role="alert" hidden></p>
     </main>

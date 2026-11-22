@@ -1,16 +1,30 @@
 import { Engine } from "@babylonjs/core/Engines/engine";
-import { createTestScene } from "./scene";
+import { setupFullscreen } from "./fullscreen";
+import { createInput } from "./input";
+import { createPlatformerScene } from "./scene";
 import "./style.css";
 
 const canvas = document.querySelector<HTMLCanvasElement>("#scene")!;
 const errorMessage = document.querySelector<HTMLParagraphElement>("#scene-error")!;
+const cleanupFullscreen = setupFullscreen(
+  document.querySelector<HTMLElement>(".viewport")!,
+  document.querySelector<HTMLButtonElement>("#fullscreen")!,
+  document.querySelector<HTMLElement>("#fullscreen-status")!,
+);
+import.meta.hot?.dispose(cleanupFullscreen);
 
 try {
   const engine = new Engine(canvas, true);
   // Cap the pixel ratio to keep the render target small on high-density phones.
   engine.setHardwareScalingLevel(1 / Math.min(window.devicePixelRatio, 1.5));
 
-  const { scene, modelReady } = createTestScene(engine, canvas);
+  const status = document.querySelector<HTMLElement>("#game-status")!;
+  const input = createInput(
+    document.querySelector<HTMLElement>("#stick")!,
+    document.querySelector<HTMLButtonElement>("#jump")!,
+    document.querySelector<HTMLButtonElement>("#restart")!,
+  );
+  const { scene, modelReady } = createPlatformerScene(engine, input, status);
   const resize = new ResizeObserver(() => engine.resize());
   resize.observe(canvas);
   engine.runRenderLoop(() => scene.render());
@@ -19,11 +33,13 @@ try {
     if (scene.isDisposed) return;
 
     console.error(error);
+    status.hidden = true;
     errorMessage.textContent = "Не удалось загрузить модель робота.";
     errorMessage.hidden = false;
   });
 
   import.meta.hot?.dispose(() => {
+    input.dispose();
     resize.disconnect();
     engine.dispose();
   });
