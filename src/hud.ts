@@ -1,4 +1,5 @@
 import { createCatPuzzle } from "./cat-puzzle";
+import { createTravelJournal } from "./travel-journal";
 
 type View = {
   health: number;
@@ -50,10 +51,11 @@ export function createHud(actions: {
     resumeGame,
     solve: actions.unlockDoor,
   }, options);
+  const travel = createTravelJournal(actions.clearInput, resumeGame, options);
   let checkpointIndex = 0;
 
   function modalOpen() {
-    return dialog.open || puzzle.open || checkpointDialog.open;
+    return dialog.open || puzzle.open || checkpointDialog.open || travel.open;
   }
 
   function countStars() {
@@ -121,6 +123,9 @@ export function createHud(actions: {
   checkpointDialog.addEventListener("close", resumeGame, options);
 
   document.querySelector("#lessons")!.addEventListener("click", showLessons, options);
+  document.querySelector("#travel-journal-button")!.addEventListener("click", () => {
+    if (!modalOpen()) travel.showJournal();
+  }, options);
   document.querySelector("#play-again")!.addEventListener("click", () => {
     actions.restart();
     canvas.focus();
@@ -134,8 +139,13 @@ export function createHud(actions: {
 
   return {
     get paused() { return modalOpen(); },
+    get travelOpen() { return travel.open; },
+    dismissTravel: travel.dismiss,
     countStars,
     showLessons,
+    talkToLibrarian() {
+      if (!modalOpen()) travel.talk();
+    },
     showMinigame() {
       if (!modalOpen() && countStars() === 3) puzzle.show();
     },
@@ -179,6 +189,7 @@ export function createHud(actions: {
       lessonList.replaceChildren();
       checkpointList.replaceChildren();
       puzzle.dispose();
+      travel.dismiss();
       events.abort();
     },
   };

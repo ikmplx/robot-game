@@ -14,6 +14,7 @@ import { createHero } from "./hero";
 import { createHud } from "./hud";
 import type { GameInput } from "./input";
 import { createLevel, createWorkshop } from "./level";
+import { createLibrarian } from "./librarian";
 import { createPlayer, type Solid } from "./platformer";
 import { arenas, bossArena, checkpointChoices, crateCourses, gate, hazard, lifts, maze, spawn, treasure, ziplines, type Arena } from "./route";
 import { createTreasureChest } from "./treasure";
@@ -30,10 +31,12 @@ const prompts = {
   zipline: "Зацепиться за трос",
   resetCrates: "Сбросить ящики",
   treasure: "Открыть сундук",
+  librarian: "Поговорить с библиотекарем",
 };
 
 type Ride = { kind: "lift" | "zipline"; index: number; progress: number };
-type Interaction = { kind: "lessons" | "minigame" | "treasure" } | { kind: "lift" | "zipline" | "resetCrates"; index: number };
+type Interaction = { kind: "lessons" | "minigame" | "treasure" | "librarian" }
+  | { kind: "lift" | "zipline" | "resetCrates"; index: number };
 
 function horizontalDistance(a: Vector3, b: Vector3) {
   return Math.hypot(a.x - b.x, a.z - b.z);
@@ -72,6 +75,7 @@ export async function createPlatformerScene(engine: Engine, input: GameInput) {
   const { avatar, draw: drawHero } = await createHero(scene, workshop);
   const createCrane = createCranes(scene, workshop);
   const level = createLevel(scene, workshop, solids);
+  const librarian = createLibrarian(scene, workshop, solids);
   const annex = createAnnex(scene, workshop, solids);
   const guardian = createGuardian(scene, workshop);
   const chest = createTreasureChest(scene, workshop, solids);
@@ -224,6 +228,9 @@ export async function createPlatformerScene(engine: Engine, input: GameInput) {
 
   function interaction(): Interaction | null {
     if (finished || openingChest || !player.grounded || ride) return null;
+    if (Math.abs(position.y - librarian.position.y) < 0.35 && horizontalDistance(position, librarian.position) < 2.2) {
+      return { kind: "librarian" };
+    }
     if (guardian.defeated && position.y === treasure.y && position.z > bossArena.back
       && position.z < treasure.z && horizontalDistance(position, treasure) < 2.75) return { kind: "treasure" };
     if (cables[1].used && position.y === gate.y && position.z >= gate.z - 2.65
@@ -252,6 +259,12 @@ export async function createPlatformerScene(engine: Engine, input: GameInput) {
   function interact() {
     const action = interaction();
     switch (action?.kind) {
+      case "librarian":
+        facing = Math.atan2(librarian.position.x - position.x, librarian.position.z - position.z);
+        moving = false;
+        swing = 0;
+        hud.talkToLibrarian();
+        break;
       case "lessons":
         hud.showLessons();
         break;
@@ -541,6 +554,7 @@ export async function createPlatformerScene(engine: Engine, input: GameInput) {
       swing / attackSeconds, invulnerable > 0, ride?.kind === "zipline");
     for (const fight of fights) for (const enemy of fight.enemies) enemy.draw(clock);
     guardian.draw(clock, position);
+    librarian.draw(clock, dt, position);
     chest.draw(chestProgress);
     for (const [index, { coin, position: center }] of level.coins.entries()) {
       if (!coin.isEnabled()) continue;
@@ -612,6 +626,8 @@ export async function createPlatformerScene(engine: Engine, input: GameInput) {
           }
         }
       }
+    } else if (hud.travelOpen) {
+      if (input.takeInteract()) hud.dismissTravel();
     } else {
       input.reset();
     }

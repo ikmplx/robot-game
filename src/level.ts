@@ -12,7 +12,7 @@ import type { Scene } from "@babylonjs/core/scene";
 import { furnishLibrary } from "./library";
 import { createLibraryTextures } from "./library-textures";
 import { pushSolid, solidsOverlap, type Solid } from "./platformer";
-import { arenas, coinSpots, crateCourses, decks, gate, hazard, jumpBlocks, lifts, room, ziplines, type XYZ } from "./route";
+import { arenas, coinSpots, crateCourses, decks, gate, hazard, jumpBlocks, lifts, lowerSideRooms, room, ziplines, type XYZ } from "./route";
 
 export function createWorkshop(scene: Scene, shadows: ShadowGenerator) {
   const textures = createLibraryTextures(scene);
@@ -259,10 +259,27 @@ export function createLevel(scene: Scene, workshop: Workshop, solids: Solid[]) {
       max: new Vector3(x + halfWidth, top + crateSize, back - 0.16),
     };
     for (const side of [-1, 1]) {
-      placedBlock("Cargo sidewall", [0.32, 2.8, back - front],
-        [x + side * (halfWidth + 0.16), top + 1.4, (back + front) / 2], shell);
-      box("Cargo sideline", [0.08, 0.024, back - front],
-        [x + side * (halfWidth - 0.12), top + 0.012, (back + front) / 2], amber);
+      const wallX = x + side * (halfWidth + 0.16);
+      const addWall = (from: number, to: number) => {
+        placedBlock("Cargo sidewall", [0.32, 2.8, to - from], [wallX, top + 1.4, (from + to) / 2], shell);
+        box("Cargo sideline", [0.08, 0.024, to - from],
+          [x + side * (halfWidth - 0.12), top + 0.012, (from + to) / 2], amber);
+      };
+      if (course === crateCourses[0]) {
+        const { entranceWidth, entranceZ } = lowerSideRooms;
+        const start = entranceZ - entranceWidth / 2;
+        const end = entranceZ + entranceWidth / 2;
+        addWall(front, start);
+        addWall(end, back);
+        for (const z of [start, end]) {
+          box("Side room door jamb", [0.52, 2.8, 0.16], [wallX, 1.4, z], wood);
+          box("Brass door jamb inlay", [0.04, 2.52, 0.05], [wallX - side * 0.272, 1.4, z], silver);
+        }
+        box("Side room door lintel", [0.54, 0.23, entranceWidth + 0.25], [wallX, 2.69, entranceZ], wood);
+        box("Side room threshold", [0.72, 0.034, entranceWidth - 0.12], [wallX, 0.018, entranceZ], silver);
+      } else {
+        addWall(front, back);
+      }
     }
     for (const obstacle of course.obstacles) {
       const obstacleX = x + obstacle.x;
@@ -478,6 +495,15 @@ export function createLevel(scene: Scene, workshop: Workshop, solids: Solid[]) {
   }
 
   furnishLibrary(scene, workshop);
+
+  const alcoveRug = material("Side room carpet", "#385D83", 0.14, textures.linen);
+  for (const [x, z, width, depth] of [[-22.35, 56.15, 6.5, 6.4], [7.65, 55.35, 6.05, 5]] as const) {
+    box("Side room carpet", [width, 0.016, depth], [x, 0.009, z], alcoveRug).receiveShadows = true;
+    for (const edge of [-1, 1]) {
+      box("Side room woven border", [0.064, 0.015, depth - 0.36], [x + edge * (width / 2 - 0.19), 0.018, z], silver);
+      box("Side room woven border", [width - 0.38, 0.015, 0.064], [x, 0.018, z + edge * (depth / 2 - 0.19)], silver);
+    }
+  }
 
   const coins = [
     ...coinSpots.map(([x, y, z]) => createCoin(x, y, z, false)),
