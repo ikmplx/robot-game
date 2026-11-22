@@ -3,51 +3,116 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>Робот на платформе</title>
-    <script type="module" crossorigin src="/robot-game/assets/index-C6gjve3w.js"></script>
-    <link rel="modulepreload" crossorigin href="/robot-game/assets/rolldown-runtime-DK3Fl9T5.js">
-    <link rel="modulepreload" crossorigin href="/robot-game/assets/observable-BmPG9gPP.js">
-    <link rel="modulepreload" crossorigin href="/robot-game/assets/performanceConfigurator-BmjQrsSV.js">
-    <link rel="modulepreload" crossorigin href="/robot-game/assets/devTools-DmD3AOL3.js">
-    <link rel="modulepreload" crossorigin href="/robot-game/assets/precisionDate-CfCevjl-.js">
-    <link rel="modulepreload" crossorigin href="/robot-game/assets/logger-CuBYPcDK.js">
-    <link rel="modulepreload" crossorigin href="/robot-game/assets/shaderStore-D-XQlhUT.js">
-    <link rel="modulepreload" crossorigin href="/robot-game/assets/abstractEngine-D96vBddz.js">
-    <link rel="modulepreload" crossorigin href="/robot-game/assets/dataBuffer-C-wqV4qF.js">
-    <link rel="modulepreload" crossorigin href="/robot-game/assets/thinEngine-CxBbUxVJ.js">
-    <link rel="modulepreload" crossorigin href="/robot-game/assets/typeStore-Cu_sj2zM.js">
-    <link rel="modulepreload" crossorigin href="/robot-game/assets/math.scalar.functions-Bcxiuh2E.js">
-    <link rel="modulepreload" crossorigin href="/robot-game/assets/math.vector-Ct6Oc_tm.js">
-    <link rel="modulepreload" crossorigin href="/robot-game/assets/math.color-DEkuF3wJ.js">
-    <link rel="modulepreload" crossorigin href="/robot-game/assets/math.plane-BDm7EIUd.js">
-    <link rel="modulepreload" crossorigin href="/robot-game/assets/decorators-BOtej2xA.js">
-    <link rel="modulepreload" crossorigin href="/robot-game/assets/guid-BXdVC_j_.js">
-    <link rel="modulepreload" crossorigin href="/robot-game/assets/webRequest-dqz0dHXK.js">
-    <link rel="modulepreload" crossorigin href="/robot-game/assets/tools-5_wp_RhL.js">
-    <link rel="modulepreload" crossorigin href="/robot-game/assets/decorators.serialization-BNFeUGZZ.js">
-    <link rel="modulepreload" crossorigin href="/robot-game/assets/texture-DMDcjeD3.js">
-    <link rel="modulepreload" crossorigin href="/robot-game/assets/buffer-DfOg1Czm.js">
-    <link rel="modulepreload" crossorigin href="/robot-game/assets/postprocess.vertex-CqEQ0GqR.js">
-    <link rel="modulepreload" crossorigin href="/robot-game/assets/postprocess.vertex-3K0axN5Y.js">
-    <link rel="modulepreload" crossorigin href="/robot-game/assets/effectRenderer-BA3LpEx-.js">
-    <link rel="modulepreload" crossorigin href="/robot-game/assets/lightConstants-_xsYUOSS.js">
-    <link rel="stylesheet" crossorigin href="/robot-game/assets/index-h5WtPdAB.css">
+    <meta name="theme-color" content="#10101d" />
+    <link rel="manifest" href="./game.webmanifest" />
+    <title>Рубеж</title>
+    <script type="module" crossorigin src="./assets/index-D_7gVUzy.js"></script>
+    <link rel="modulepreload" crossorigin href="./assets/rolldown-runtime-DK3Fl9T5.js">
+    <link rel="modulepreload" crossorigin href="./assets/performanceConfigurator-fYuIgwDq.js">
+    <link rel="modulepreload" crossorigin href="./assets/logger-CuBYPcDK.js">
+    <link rel="modulepreload" crossorigin href="./assets/shaderStore-D-XQlhUT.js">
+    <link rel="modulepreload" crossorigin href="./assets/abstractEngine-a7Ce2DWD.js">
+    <link rel="modulepreload" crossorigin href="./assets/dataBuffer-C-wqV4qF.js">
+    <link rel="modulepreload" crossorigin href="./assets/thinEngine-BdOJdWnc.js">
+    <link rel="modulepreload" crossorigin href="./assets/typeStore-Cu_sj2zM.js">
+    <link rel="modulepreload" crossorigin href="./assets/math.scalar.functions-Bg-lysIT.js">
+    <link rel="modulepreload" crossorigin href="./assets/math.vector-Bb0FLRpA.js">
+    <link rel="modulepreload" crossorigin href="./assets/postprocess.vertex-CqEQ0GqR.js">
+    <link rel="modulepreload" crossorigin href="./assets/postprocess.vertex-3K0axN5Y.js">
+    <link rel="stylesheet" crossorigin href="./assets/index-uZE210th.css">
   </head>
   <body>
     <main class="viewport">
-      <canvas id="scene" aria-label="Трёхмерная трасса с платформами"></canvas>
-      <div class="overlay">
-        <div>
-          <h1>Доберитесь до маяка</h1>
-          <p class="controls">WASD / стрелки · пробел — прыжок</p>
+      <canvas id="scene" tabindex="-1" aria-label="Трёхмерный уровень с платформами"></canvas>
+
+      <header class="overlay">
+        <div class="mission">
+          <h1>Рубеж</h1>
+          <p id="objective" role="status">Перепрыгните по кубам</p>
+          <div id="boss-health" class="boss-health" hidden>
+            <label for="boss-meter">Хранитель</label>
+            <progress id="boss-meter" max="6" value="6"></progress>
+          </div>
         </div>
-        <button id="restart" type="button">Заново</button>
+        <div class="hud">
+          <div class="counters">
+            <span id="health" class="health" aria-label="Здоровье 3 из 3">♥♥♥</span>
+            <span class="counter"><span class="coin-icon" aria-hidden="true"></span><span id="coins" aria-label="Монеты: 0">0</span></span>
+            <span class="counter stars"><span aria-hidden="true">★</span><span id="stars" aria-label="Звёзды: 0 из 3">0 / 3</span></span>
+          </div>
+          <div class="overlay-actions">
+            <button id="lessons" class="primary" type="button">Уроки</button>
+            <button id="restart" class="icon-button" type="button" aria-label="Заново" title="Заново (R)">↻</button>
+            <button id="fullscreen" class="icon-button" type="button" aria-label="На весь экран" hidden>⛶</button>
+            <p id="fullscreen-status" role="status"></p>
+          </div>
+        </div>
+      </header>
+
+      <div class="context">
+        <p id="feedback" role="status" hidden></p>
+        <button id="interact" type="button" hidden><kbd>E</kbd><span></span></button>
       </div>
-      <p id="game-status" role="status">Загрузка…</p>
+
+      <div class="keyboard-guide" aria-label="Управление">
+        <span><kbd>WASD</kbd> Движение</span>
+        <span><kbd>Пробел</kbd> Прыжок</span>
+        <span><kbd>ЛКМ</kbd> Удар</span>
+      </div>
+
       <div class="touch-controls">
         <div id="stick" aria-hidden="true"><span></span></div>
-        <button id="jump" type="button">Прыжок</button>
+        <div class="touch-actions">
+          <button id="attack" type="button">Удар</button>
+          <button id="jump" type="button">Прыжок</button>
+        </div>
       </div>
+
+      <section id="result" class="result" aria-labelledby="result-title" hidden>
+        <h2 id="result-title">Уровень пройден</h2>
+        <p id="result-coins"></p>
+        <button id="play-again" class="primary" type="button">Играть снова</button>
+      </section>
+
+      <dialog id="activity" aria-labelledby="activity-title" aria-describedby="activity-copy">
+        <div class="activity-heading">
+          <h2 id="activity-title">Уроки</h2>
+          <button id="close-activity" class="icon-button" type="button" aria-label="Закрыть">×</button>
+        </div>
+        <p id="activity-copy">Зачтите три урока, чтобы получить три звезды. Каждый урок пока заменён кнопкой.</p>
+        <div id="lesson-list"></div>
+      </dialog>
+
+      <dialog id="cat-lock" class="puzzle-dialog" aria-labelledby="puzzle-title" aria-describedby="puzzle-instructions">
+        <header class="puzzle-heading">
+          <div class="puzzle-emblem" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+          <div>
+            <h2 id="puzzle-title">Кошачья мозаика</h2>
+            <p id="puzzle-instructions">Нажмите на плитку, которую хотите переместить, затем на плитку на нужном месте. Они поменяются местами. На клавиатуре перемещайтесь стрелками и выбирайте клавишей Enter.</p>
+          </div>
+          <button id="close-puzzle" class="icon-button" type="button" aria-label="Закрыть мозаику">×</button>
+        </header>
+        <div class="puzzle-layout">
+          <div class="puzzle-frame">
+            <div id="puzzle-board" class="puzzle-board" role="group" aria-label="Мозаика, 2 ряда по 4 плитки"></div>
+          </div>
+          <aside class="puzzle-sidebar">
+            <figure class="puzzle-reference">
+              <img id="puzzle-preview" width="1200" height="800" alt="Рыжий кот с зелёными глазами">
+              <figcaption>Образец</figcaption>
+            </figure>
+            <div class="puzzle-progress">
+              <p id="puzzle-status" role="status"></p>
+              <progress id="puzzle-progress" max="8" value="0" aria-label="Плитки на своих местах"></progress>
+            </div>
+          </aside>
+        </div>
+        <footer class="puzzle-actions">
+          <button id="shuffle-puzzle" type="button"><span aria-hidden="true">↻</span> Перемешать</button>
+          <button id="leave-puzzle" class="primary" type="button" hidden>Продолжить</button>
+        </footer>
+      </dialog>
+
       <p id="scene-error" role="alert" hidden></p>
     </main>
   </body>

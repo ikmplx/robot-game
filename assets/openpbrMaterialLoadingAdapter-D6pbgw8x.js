@@ -1,1 +1,0 @@
-export{r as OpenPBRMaterialLoadingAdapter}from"./glTF-C-0SCRBC.js";
