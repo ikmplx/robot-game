@@ -285,6 +285,11 @@ export function createLevel(scene: Scene, workshop: Workshop, solids: Solid[]) {
         max: new Vector3(padX + halfCrate, top + crateSize, padZ + halfCrate),
       };
       const pad = box("Crate target", [1.94, 0.035, 1.94], [padX, top + 0.024, padZ], inset);
+      if (homeX === padX) {
+        for (let z = homeZ + 1.15; z < padZ - 1.1; z += 0.58) {
+          box("Cargo guide", [0.08, 0.02, 0.28], [padX, top + 0.015, z], color);
+        }
+      }
       const markings = [-1, 1].flatMap((edge) => [
         box("Target border", [1.94, 0.045, 0.095], [padX, top + 0.029, padZ + edge * 0.92], color),
         box("Target border", [0.095, 0.045, 1.75], [padX + edge * 0.92, top + 0.029, padZ], color),

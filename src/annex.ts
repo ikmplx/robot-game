@@ -10,7 +10,7 @@ import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import type { Scene } from "@babylonjs/core/scene";
 import type { Workshop } from "./level";
 import type { Solid } from "./platformer";
-import { bossArena, goal, maze, type XYZ } from "./route";
+import { bossArena, maze, type XYZ } from "./route";
 
 export function createAnnex(scene: Scene, workshop: Workshop, solids: Solid[]) {
   const { box, material, shadows } = workshop;
@@ -19,20 +19,26 @@ export function createAnnex(scene: Scene, workshop: Workshop, solids: Solid[]) {
   const tile = material("Slate tile", "#59697B");
   const alternateTile = material("Blue slate tile", "#4D5F75");
   const metal = material("Arena brass", "#B98652");
-  const wax = material("Candle wax", "#E9BA76", 0.21);
-  const wick = material("Candle wick", "#B69564", 0.48);
+  const wax = material("Candle wax", "#E9BA76");
+  const wick = material("Candle wick", "#53402C");
   const flameColor = material("Candle flame", "#FFC063", 0.95);
   const flameCore = material("Candle flame core", "#FFF1BA", 1);
   const amber = material("Lantern glass", "#FFC673", 0.58);
-  const teal = material("Exit inlay", "#75E5D2", 0.62);
   flameColor.disableLighting = true;
   flameCore.disableLighting = true;
   for (const surface of [stone, cap, tile, alternateTile]) surface.maxSimultaneousLights = 6;
 
   const { x, top, halfWidth, cell, front, back, rows } = maze;
   const minX = x - halfWidth;
-  const litMeshes: AbstractMesh[] = [];
-  let litCount = 0;
+  const mazeMeshes = new Set<AbstractMesh>();
+  const surfaces: { mesh: AbstractMesh; wall: boolean }[] = [];
+  const candleRange = cell * 1.9;
+  let keyCandlesLit = 0;
+
+  function mazeSurface(mesh: AbstractMesh, wall: boolean) {
+    mazeMeshes.add(mesh);
+    surfaces.push({ mesh, wall });
+  }
 
   function solidBlock(name: string, size: XYZ, center: XYZ, surface: StandardMaterial) {
     const mesh = box(name, size, center, surface);
@@ -45,17 +51,15 @@ export function createAnnex(scene: Scene, workshop: Workshop, solids: Solid[]) {
   const floor = solidBlock("Annex foundation", [halfWidth * 2, 0.8, 69], [x, top - 0.4, 257.5], stone);
   solids[solids.length - 1].max.y = top;
   shadows.addShadowCaster(floor, false);
-  litMeshes.push(floor);
 
   const wallHeight = 2.96;
   for (const side of [-1, 1]) {
     const wallX = x + side * (halfWidth + 0.13);
-    litMeshes.push(solidBlock("Annex side wall", [0.32, wallHeight, 69],
-      [wallX, top + wallHeight / 2, 257.5], stone));
+    solidBlock("Annex side wall", [0.32, wallHeight, 69], [wallX, top + wallHeight / 2, 257.5], stone);
     box("Annex upper trim", [0.42, 0.11, 69], [wallX, top + wallHeight - 0.06, 257.5], cap);
   }
 
-  function grille(name: string, z: number, width: number, surface: StandardMaterial) {
+  function grille(name: string, z: number, width: number, surface: StandardMaterial, inMaze = false) {
     const root = new TransformNode(name, scene);
     root.position.set(x, top, z);
     const barCount = Math.ceil(width / 0.33);
@@ -63,6 +67,7 @@ export function createAnnex(scene: Scene, workshop: Workshop, solids: Solid[]) {
       box("Portcullis bar", [0.08, 2.96, 0.13], [width * (i / barCount - 0.5), 1.48, 0], surface, root);
     }
     for (const h of [0.27, 2.66]) box("Portcullis rail", [width, 0.15, 0.12], [0, h, 0], cap, root);
+    if (inMaze) for (const mesh of root.getChildMeshes()) mazeSurface(mesh, false);
     const solid: Solid = {
       min: new Vector3(x - width / 2, top, z - 0.1),
       max: new Vector3(x + width / 2, top + 2.96, z + 0.1),
@@ -75,7 +80,7 @@ export function createAnnex(scene: Scene, workshop: Workshop, solids: Solid[]) {
     };
   }
 
-  const setMazeExit = grille("Candle grille", back - 0.33, cell + 0.04, amber);
+  const setMazeExit = grille("Candle grille", back - 0.33, cell + 0.04, metal, true);
   function arenaGate(name: string, z: number, opening: number) {
     for (const side of [-1, 1]) {
       const width = halfWidth - opening / 2;
@@ -88,56 +93,60 @@ export function createAnnex(scene: Scene, workshop: Workshop, solids: Solid[]) {
   const setArenaExit = arenaGate("Guardian grille", bossArena.back, 3.5);
   solidBlock("Annex end wall", [halfWidth * 2, 3, 0.52], [x, top + 1.5, 291.85], stone);
 
-  const slots: Vector3[] = [];
+  const slots: { position: Vector3; key: boolean }[] = [];
   for (const [rowIndex, row] of rows.entries()) {
     const z = front + (rowIndex + 0.5) * cell;
-    let column = 0;
-    while (column < row.length) {
-      if (row[column] === "#") {
-        const start = column++;
-        while (row[column] === "#") column++;
-        const width = (column - start) * cell;
-        const wallX = minX + (start + column) * cell / 2;
-        const wall = solidBlock("Maze block", [width, wallHeight, cell], [wallX, top + wallHeight / 2, z], stone);
-        const edge = box("Maze block cap", [width - 0.08, 0.1, cell - 0.08], [wallX, top + wallHeight - 0.02, z], cap);
-        litMeshes.push(wall, edge);
+    for (const [column, kind] of [...row].entries()) {
+      const px = minX + (column + 0.5) * cell;
+      if (kind === "#") {
+        const wall = solidBlock("Maze block", [cell, wallHeight, cell], [px, top + wallHeight / 2, z], stone);
+        const edge = box("Maze block cap", [cell - 0.08, 0.1, cell - 0.08], [px, top + wallHeight - 0.02, z], cap);
+        mazeSurface(wall, true);
+        mazeSurface(edge, true);
       } else {
-        const px = minX + (column + 0.5) * cell;
         const surface = (column + rowIndex) % 2 ? tile : alternateTile;
-        litMeshes.push(box("Maze slate tile", [cell - 0.055, 0.026, cell - 0.055], [px, top + 0.006, z], surface));
-        if (row[column] !== ".") slots.push(new Vector3(px, top, z));
-        column++;
+        mazeSurface(box("Maze slate tile", [cell - 0.025, 0.026, cell - 0.025], [px, top + 0.006, z], surface), false);
+        if (kind !== ".") slots.push({ position: new Vector3(px, top, kind === "A" ? front + 1.3 : z), key: kind !== "*" });
       }
     }
   }
+  const totalCandles = slots.filter(({ key }) => key).length;
 
-  const scoutLight = new PointLight("Scout visibility in the dark", Vector3.Zero(), scene);
-  scoutLight.diffuse = Color3.FromHexString("#C1D7FF");
-  scoutLight.range = 4.6;
-  scoutLight.intensity = 0.58;
-  scoutLight.includedOnlyMeshes = litMeshes;
-  scoutLight.setEnabled(false);
+  function cellAt(x: number, z: number) {
+    return rows[Math.floor((z - front) / cell)]?.[Math.floor((x - minX) / cell)];
+  }
 
   function pathClear(from: Vector3, to: Vector3) {
     const steps = Math.ceil(Math.hypot(to.x - from.x, to.z - from.z) / 0.16);
     for (let i = 1; i < steps; i++) {
-      const row = Math.floor((from.z + (to.z - from.z) * i / steps - front) / cell);
-      const column = Math.floor((from.x + (to.x - from.x) * i / steps - minX) / cell);
-      if (rows[row]?.[column] === "#") return false;
+      if (cellAt(from.x + (to.x - from.x) * i / steps, from.z + (to.z - from.z) * i / steps) === "#") return false;
     }
     return true;
   }
 
-  const candles = slots.map((position, index) => {
-    const base = CreateCylinder("Candle holder", { diameter: 0.58, height: 0.12, tessellation: 18 }, scene);
-    base.position.copyFrom(position).y += 0.06;
+  const cardinal = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+  function receivesCandleLight(position: Vector3, surface: Vector3, wall: boolean) {
+    if (Math.hypot(position.x - surface.x, position.z - surface.z) > candleRange + cell / 2) return false;
+    if (!wall) return pathClear(position, surface);
+    return cardinal.some(([dx, dz]) => {
+      const face = new Vector3(surface.x + dx * (cell / 2 + 0.08), top, surface.z + dz * (cell / 2 + 0.08));
+      const passage = cellAt(face.x, face.z);
+      return passage && passage !== "#" && pathClear(position, face);
+    });
+  }
+
+  const candles = slots.map(({ position, key }, index) => {
+    const pedestal = key ? 0.34 : 0.12;
+    const base = CreateCylinder("Candle holder", { diameter: key ? 0.74 : 0.46, height: pedestal, tessellation: 18 }, scene);
+    base.position.copyFrom(position).y += pedestal / 2;
     base.material = metal;
-    const candle = CreateCylinder("Wax candle", { diameter: 0.29, height: 0.63, tessellation: 16 }, scene);
-    candle.position.copyFrom(position).y += 0.39;
+    const candle = CreateCylinder("Wax candle", { diameter: key ? 0.32 : 0.25, height: 0.58, tessellation: 16 }, scene);
+    candle.position.copyFrom(position).y += pedestal + 0.29;
     candle.material = wax;
-    box("Candle wick", [0.052, 0.14, 0.052], [position.x, top + 0.75, position.z], wick);
+    const wickMesh = box("Candle wick", [0.052, 0.14, 0.052], [position.x, top + pedestal + 0.6, position.z], wick);
+    for (const mesh of [base, candle, wickMesh]) mazeSurface(mesh, false);
     const fire = new TransformNode("Candle flame", scene);
-    fire.position.copyFrom(position).y += 0.91;
+    fire.position.copyFrom(position).y += pedestal + 0.76;
     const outer = CreateSphere("Flame body", { diameter: 0.32, segments: 8 }, scene);
     outer.parent = fire;
     outer.scaling.set(0.68, 1.43, 0.68);
@@ -147,15 +156,12 @@ export function createAnnex(scene: Scene, workshop: Workshop, solids: Solid[]) {
     inner.position.y = -0.07;
     inner.scaling.y = 1.45;
     inner.material = flameCore;
-    const point = new PointLight("Candle pool of light", new Vector3(position.x, top + 1.18, position.z), scene);
+    mazeMeshes.add(outer);
+    mazeMeshes.add(inner);
+    const point = new PointLight("Candle pool of light", new Vector3(position.x, top + pedestal + 0.92, position.z), scene);
     point.diffuse = Color3.FromHexString("#FFAD59");
-    point.range = 6.8;
-    point.includedOnlyMeshes = litMeshes.filter((mesh) => {
-      if (mesh === floor) return true;
-      if (Math.hypot(mesh.position.x - position.x, mesh.position.z - position.z) > 8.2) return false;
-      return !mesh.name.startsWith("Maze slate") || pathClear(position, mesh.position);
-    });
-    return { position, fire, point, index, lit: false };
+    point.range = candleRange;
+    return { position, fire, point, index, key, lit: false };
   });
 
   for (const side of [-1, 1]) {
@@ -172,20 +178,30 @@ export function createAnnex(scene: Scene, workshop: Workshop, solids: Solid[]) {
     inlay.position.z -= 1.9;
     inlay.material = metal;
   }
-  const goalRing = CreateTorus("Exit pad", { diameter: 2.15, thickness: 0.095, tessellation: 40 }, scene);
-  goalRing.position.copyFrom(goal).y += 0.055;
-  goalRing.material = teal;
-
   function isDark(position: Vector3) {
     return position.z >= front && position.z < back && Math.abs(position.x - x) < halfWidth
       && Math.abs(position.y - top) < 2.7;
   }
 
   return {
-    isDark,
-    get litCount() { return litCount; },
-    totalCandles: candles.length,
+    isDark, mazeMeshes, totalCandles,
+    get litCount() { return keyCandlesLit; },
     setArenaEntrance, setArenaExit,
+    lightScout(meshes: AbstractMesh[]) {
+      const worldSurfaces = surfaces.map(({ mesh, wall }) => {
+        mesh.computeWorldMatrix(true);
+        return { mesh, wall, center: mesh.getAbsolutePosition().clone() };
+      });
+      for (const { position, point } of candles) {
+        const nearby = worldSurfaces.filter(({ center, wall }) => receivesCandleLight(position, center, wall));
+        point.includedOnlyMeshes = nearby.map(({ mesh }) => mesh).concat(meshes);
+      }
+    },
+    isIlluminated(position: Vector3) {
+      return candles.some((candle) => candle.lit
+        && Math.hypot(candle.position.x - position.x, candle.position.z - position.z) < candleRange
+        && pathClear(position, candle.position));
+    },
     strike(from: Vector3, inReach: (target: Vector3, range: number) => boolean) {
       if (!isDark(from)) return false;
       let changed = false;
@@ -193,19 +209,17 @@ export function createAnnex(scene: Scene, workshop: Workshop, solids: Solid[]) {
         const { position } = candle;
         if (candle.lit || !inReach(position, 2.12) || !pathClear(from, position)) continue;
         candle.lit = true;
-        litCount++;
+        if (candle.key) keyCandlesLit++;
         changed = true;
       }
-      if (litCount === candles.length) setMazeExit(true);
+      if (changed && keyCandlesLit === totalCandles) setMazeExit(true);
       return changed;
     },
-    draw(position: Vector3, clock: number, dark: boolean) {
-      scoutLight.setEnabled(dark);
-      scoutLight.position.copyFrom(position).y += 1.28;
+    draw(clock: number, dark: boolean) {
       for (const { lit, fire, point, index } of candles) {
         fire.setEnabled(lit);
-        point.setEnabled(lit);
-        if (!lit) continue;
+        if (point.isEnabled() !== (lit && dark)) point.setEnabled(lit && dark);
+        if (!lit || !dark) continue;
         const flicker = Math.sin(clock * 16 + index * 2.6) + 0.44 * Math.sin(clock * 23 + index);
         fire.scaling.y = 1 + flicker * 0.075;
         fire.rotation.z = flicker * 0.12;
@@ -213,7 +227,7 @@ export function createAnnex(scene: Scene, workshop: Workshop, solids: Solid[]) {
       }
     },
     reset() {
-      litCount = 0;
+      keyCandlesLit = 0;
       for (const candle of candles) {
         candle.lit = false;
         candle.fire.setEnabled(false);

@@ -56,6 +56,16 @@ export const crateCourses: CrateCourse[] = [
   {
     x: -7, z: 60, top: 0, halfWidth: 11, front: 51.5, back: 69,
     restart: new Vector3(-7, 0, 52.5),
+    obstacles: [],
+    crates: [
+      { home: [-2.65, -4.2], target: [-2.65, 1.8] },
+      { home: [2.65, -4.2], target: [2.65, 1.8] },
+    ],
+    exitMessage: "Путь к первому лифту открыт",
+  },
+  {
+    x: 14, z: 171, top: 18, halfWidth: 11, front: 162.5, back: 183,
+    restart: new Vector3(14, 18, 163.55),
     obstacles: [
       { x: 0, z: -0.05, width: 2.7, depth: 5.5 },
       { x: -7.3, z: 0.65, width: 7.4, depth: 1 },
@@ -66,21 +76,6 @@ export const crateCourses: CrateCourse[] = [
       { home: [5.8, -4.65], target: [7, 6.35] },
       { home: [-7, -2], target: [5.7, 4.3] },
       { home: [6.85, 1.55], target: [-6.7, 7] },
-    ],
-    exitMessage: "Путь к первому лифту открыт",
-  },
-  {
-    x: 14, z: 171, top: 18, halfWidth: 11, front: 162.5, back: 183,
-    restart: new Vector3(14, 18, 163.55),
-    obstacles: [
-      { x: 0, z: -0.2, width: 4.4, depth: 6 },
-      { x: -7.8, z: -0.3, width: 6.4, depth: 1 },
-      { x: 7.85, z: 1.3, width: 6.3, depth: 1 },
-    ],
-    crates: [
-      { home: [-6.6, -5.65], target: [6.9, 6.3] },
-      { home: [6.2, -5.5], target: [-6.9, 6.9] },
-      { home: [0, -6.15], target: [0, 7.6] },
     ],
     exitMessage: "Второй трос доступен",
   },
@@ -113,16 +108,16 @@ export const jumpBlocks: readonly (readonly [x: number, top: number, z: number, 
 export const gate = new Vector3(-15, 15.4, 216.5);
 
 const mazeRows = [
-  "###.###",
-  "#..A#.#",
+  "###A###",
+  "#*.*#.#",
   "#.###.#",
-  "#...B.#",
+  "#*.*B.#",
   "###.#.#",
-  "#...#.#",
+  "#*.*#.#",
   "#.###.#",
-  "#C....#",
+  "#C.*.*#",
   "##.##.#",
-  "#..D..#",
+  "#..D.*#",
   "###.###",
 ];
 const mazeCell = 3.4;
@@ -139,7 +134,7 @@ export const bossArena = {
   checkpoint: new Vector3(gate.x, gate.y, 267.1),
   home: new Vector3(gate.x, gate.y, 278.2),
 };
-export const goal = new Vector3(gate.x, gate.y, 289);
+export const treasure = new Vector3(gate.x, gate.y, 290);
 
 export const coinSpots: readonly XYZ[] = [
   [0, 0, 2.2], [0.3, 0, 4.9],

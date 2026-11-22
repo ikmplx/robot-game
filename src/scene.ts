@@ -14,10 +14,13 @@ import { createHud } from "./hud";
 import type { GameInput } from "./input";
 import { createLevel, createWorkshop } from "./level";
 import { createPlayer, type Solid } from "./platformer";
-import { arenas, bossArena, crateCourses, gate, goal, hazard, lifts, maze, spawn, ziplines, type Arena } from "./route";
+import { arenas, bossArena, crateCourses, gate, hazard, lifts, maze, spawn, treasure, ziplines, type Arena } from "./route";
+import { createTreasureChest } from "./treasure";
 
 const step = 1 / 120;
 const attackSeconds = 0.34;
+const roomMask = 1;
+const mazeMask = 2;
 
 const prompts = {
   lessons: "К урокам",
@@ -25,10 +28,11 @@ const prompts = {
   lift: "Подняться на лифте",
   zipline: "Зацепиться за трос",
   resetCrates: "Сбросить ящики",
+  treasure: "Открыть сундук",
 };
 
 type Ride = { kind: "lift" | "zipline"; index: number; progress: number };
-type Interaction = { kind: "lessons" | "minigame" } | { kind: "lift" | "zipline" | "resetCrates"; index: number };
+type Interaction = { kind: "lessons" | "minigame" | "treasure" } | { kind: "lift" | "zipline" | "resetCrates"; index: number };
 
 function horizontalDistance(a: Vector3, b: Vector3) {
   return Math.hypot(a.x - b.x, a.z - b.z);
@@ -37,12 +41,10 @@ function horizontalDistance(a: Vector3, b: Vector3) {
 export function createPlatformerScene(engine: Engine, input: GameInput) {
   const scene = new Scene(engine);
   const roomBackground = Color4.FromHexString("#5D6B77FF");
-  const darkBackground = Color4.FromHexString("#0D121BFF");
-  const roomFog = Color3.FromHexString("#697783");
-  const darkFog = Color3.FromHexString("#111827");
+  const darkBackground = new Color4(0, 0, 0, 1);
   scene.clearColor = roomBackground.clone();
   scene.fogMode = Scene.FOGMODE_LINEAR;
-  scene.fogColor = roomFog.clone();
+  scene.fogColor = Color3.FromHexString("#697783");
   scene.fogStart = 20;
   scene.fogEnd = 80;
 
@@ -68,6 +70,7 @@ export function createPlatformerScene(engine: Engine, input: GameInput) {
   const level = createLevel(scene, workshop, solids);
   const annex = createAnnex(scene, workshop, solids);
   const guardian = createGuardian(scene, workshop);
+  const chest = createTreasureChest(scene, workshop, solids);
   const { avatar, drawScout, monster } = createActors(scene, workshop);
   const fights = arenas.map((zone, index) => ({
     zone,
@@ -75,6 +78,10 @@ export function createPlatformerScene(engine: Engine, input: GameInput) {
     setBarrier: level.fightBarriers[index],
     cleared: false,
   }));
+  const scoutMeshes = avatar.getChildMeshes();
+  annex.lightScout(scoutMeshes);
+  const mazeMeshes = new Set([...annex.mazeMeshes, ...scoutMeshes]);
+  for (const mesh of scene.meshes) mesh.layerMask = mazeMeshes.has(mesh) ? roomMask | mazeMask : roomMask;
   const [floorFight, shelfFight, upperFight] = fights;
   const cargo = crateCourses.map((course, index) => ({ ...level.cargo[index], course, placed: 0 }));
   const [floorCargo, upperCargo] = cargo;
@@ -103,10 +110,12 @@ export function createPlatformerScene(engine: Engine, input: GameInput) {
   let ride: Ride | null = null;
   let doorUnlocked = false;
   let doorProgress = 0;
+  let openingChest = false;
+  let chestProgress = 0;
   let finished = false;
   let feedback = "";
   let feedbackTime = 0;
-  let darkness = 0;
+  let mazeView = 0;
 
   const hud = createHud({
     unlockDoor() { doorUnlocked = true; },
@@ -124,6 +133,7 @@ export function createPlatformerScene(engine: Engine, input: GameInput) {
     player.reset(checkpoint);
     cameraFocus.copyFrom(checkpoint);
     cameraHeight = 6.95;
+    mazeView = 0;
     health = 3;
     invulnerable = 0;
     facing = 0;
@@ -163,8 +173,9 @@ export function createPlatformerScene(engine: Engine, input: GameInput) {
     finished = false;
     doorUnlocked = false;
     doorProgress = 0;
+    openingChest = false;
+    chestProgress = 0;
     feedbackTime = 0;
-    darkness = 0;
     annex.reset();
     guardian.reset();
     for (const fight of fights) {
@@ -185,7 +196,9 @@ export function createPlatformerScene(engine: Engine, input: GameInput) {
   }
 
   function interaction(): Interaction | null {
-    if (finished || !player.grounded || ride) return null;
+    if (finished || openingChest || !player.grounded || ride) return null;
+    if (guardian.defeated && position.y === treasure.y && position.z > bossArena.back
+      && position.z < treasure.z && horizontalDistance(position, treasure) < 2.75) return { kind: "treasure" };
     if (cables[1].used && position.y === gate.y && position.z >= gate.z - 2.65
       && position.z < gate.z && Math.abs(position.x - gate.x) < 2.65 && !doorUnlocked) {
       return { kind: hud.countStars() >= 3 ? "minigame" : "lessons" };
@@ -217,6 +230,12 @@ export function createPlatformerScene(engine: Engine, input: GameInput) {
         break;
       case "minigame":
         hud.showMinigame();
+        break;
+      case "treasure":
+        openingChest = true;
+        swing = 0;
+        moving = false;
+        input.reset();
         break;
       case "lift": {
         const { x, lower, z } = elevators[action.index].track;
@@ -267,8 +286,9 @@ export function createPlatformerScene(engine: Engine, input: GameInput) {
 
   function attack() {
     swing = attackSeconds;
+    const before = annex.litCount;
     if (annex.strike(position, strikeInRange)) {
-      const exitOpen = annex.litCount === annex.totalCandles;
+      const exitOpen = before < annex.totalCandles && annex.litCount === annex.totalCandles;
       notify(exitOpen ? "Все свечи горят. Решётка открылась" : "Свеча зажжена");
     }
     if (guardian.strike(strikeInRange) && guardian.defeated) {
@@ -419,6 +439,15 @@ export function createPlatformerScene(engine: Engine, input: GameInput) {
     feedbackTime = Math.max(0, feedbackTime - dt);
     doorProgress = Math.min(1, doorProgress + (doorUnlocked ? dt * 1.55 : 0));
 
+    if (openingChest) {
+      chestProgress += dt;
+      if (chestProgress >= 1.18) {
+        collected += chest.amount;
+        finished = true;
+      }
+      return;
+    }
+
     if (ride) {
       updateRide(ride, dt);
     } else {
@@ -447,19 +476,18 @@ export function createPlatformerScene(engine: Engine, input: GameInput) {
         collected += 1;
       }
     }
-
-    if (player.grounded && guardian.defeated && position.y === goal.y
-      && horizontalDistance(position, goal) < 0.95) finished = true;
   }
 
   function objective() {
-    if (finished) return "Выход достигнут";
-    if (guardian.defeated) return "Хранитель повержен · Пройдите к выходу";
+    if (finished) return "Сокровище получено";
+    if (openingChest) return `Награда · +${chest.amount} монет`;
+    if (guardian.defeated) return "Хранитель повержен · Откройте сундук";
     if (guardian.active) return guardian.hint;
     if (checkpoint === bossArena.checkpoint) return "Пройдите к арене Хранителя";
     if (checkpoint === maze.checkpoint) {
       if (annex.litCount === annex.totalCandles) return "Свечной зал · Найдите открытую решётку";
-      return `Зажигайте свечи мечом · ${annex.litCount} / ${annex.totalCandles}`;
+      if (annex.litCount === 0) return "Свечной зал · Первая свеча прямо у входа. Ударьте мечом";
+      return `Зажигайте свечи мечом · Большие свечи ${annex.litCount} / ${annex.totalCandles}`;
     }
     if (doorUnlocked) return "Пройдите в Свечной зал";
     if (ride) return ride.kind === "lift" ? "Лифт поднимается" : "Переправа по тросу";
@@ -480,12 +508,15 @@ export function createPlatformerScene(engine: Engine, input: GameInput) {
   }
 
   function draw(dt: number) {
+    const inMaze = annex.isDark(position);
+    avatar.setEnabled(!inMaze || annex.isIlluminated(position));
     avatar.position.copyFrom(position);
     avatar.rotation.y = facing;
     drawScout(clock, moving && !ride && !finished, player.grounded,
       swing / attackSeconds, invulnerable > 0, ride?.kind === "zipline");
     for (const fight of fights) for (const enemy of fight.enemies) enemy.draw(clock);
     guardian.draw(clock);
+    chest.draw(chestProgress);
     for (const [index, { coin, position: center }] of level.coins.entries()) {
       if (!coin.isEnabled()) continue;
       coin.rotation.y = clock * 2.25 + index * 0.4;
@@ -494,29 +525,27 @@ export function createPlatformerScene(engine: Engine, input: GameInput) {
     level.setDoor(doorProgress * doorProgress * (3 - 2 * doorProgress), hud.countStars());
 
     const follow = 1 - Math.exp(-dt * 8);
-    const inMaze = annex.isDark(position);
-    darkness += ((inMaze ? 1 : 0) - darkness) * follow;
-    Color4.LerpToRef(roomBackground, darkBackground, darkness, scene.clearColor);
-    Color3.LerpToRef(roomFog, darkFog, darkness, scene.fogColor);
-    ambientLight.intensity = 0.78 - 0.63 * darkness;
-    sun.intensity = 0.95 - 0.9 * darkness;
-    scene.fogStart = 20 - 10.5 * darkness;
-    scene.fogEnd = 80 - 52 * darkness;
-    annex.draw(position, clock, inMaze);
+    mazeView += ((inMaze ? 1 : 0) - mazeView) * follow;
+    camera.layerMask = inMaze ? mazeMask : roomMask;
+    scene.clearColor.copyFrom(inMaze ? darkBackground : roomBackground);
+    scene.fogMode = inMaze ? Scene.FOGMODE_NONE : Scene.FOGMODE_LINEAR;
+    ambientLight.intensity = inMaze ? 0 : 0.78;
+    sun.intensity = inMaze ? 0 : 0.95;
+    annex.draw(clock, inMaze);
     Vector3.LerpToRef(cameraFocus, position, follow, cameraFocus);
     const narrow = engine.getRenderWidth() / engine.getRenderHeight() < 0.95;
     camera.fovMode = narrow ? FreeCamera.FOVMODE_HORIZONTAL_FIXED : FreeCamera.FOVMODE_VERTICAL_FIXED;
     const viewingCargo = crateCourses.some(({ x, top, front, back, halfWidth }) => Math.abs(position.y - top) < 2.3
       && position.z >= front - 2 && position.z <= back + 0.5 && Math.abs(position.x - x) < halfWidth + 0.4);
-    cameraHeight += ((inMaze ? 9.45 : viewingCargo ? 11.25 : 6.95) - cameraHeight) * follow;
+    cameraHeight += ((inMaze ? 15.75 : viewingCargo ? 11.25 : 6.95) - cameraHeight) * follow;
     const direction = ride?.kind === "zipline" ? Math.sin(facing) : 0;
-    camera.position.set(cameraFocus.x - direction * 2.5, cameraFocus.y + cameraHeight, cameraFocus.z - 9.25);
-    cameraTarget.set(cameraFocus.x + direction * 2.4, cameraFocus.y + 0.42, cameraFocus.z + 4.1);
+    camera.position.set(cameraFocus.x - direction * 2.5, cameraFocus.y + cameraHeight, cameraFocus.z - 9.25 + 6.25 * mazeView);
+    cameraTarget.set(cameraFocus.x + direction * 2.4, cameraFocus.y + 0.42, cameraFocus.z + 4.1 - 2.6 * mazeView);
     camera.setTarget(cameraTarget);
 
     const available = interaction();
     hud.update({
-      health, coins: collected, totalCoins: level.coins.length, objective: objective(),
+      health, coins: collected, totalCoins: level.coins.length + chest.amount, objective: objective(),
       bossHealth: guardian.active ? guardian.health : null, bossMaxHealth: guardian.maxHealth,
       interaction: available ? prompts[available.kind] : "", feedback: feedbackTime > 0 && !finished ? feedback : "", finished,
     });
@@ -532,7 +561,7 @@ export function createPlatformerScene(engine: Engine, input: GameInput) {
         if (input.takeInteract()) interact();
         if (!hud.paused) {
           const { x, z } = input.movement();
-          if (!ride) {
+          if (!ride && !openingChest) {
             if (x || z) facing = Math.atan2(x, z);
             if (input.takeJump()) player.queueJump();
             if (input.takeAttack() && swing === 0) attack();
