@@ -9,6 +9,10 @@ const movementKeys: Readonly<Record<string, [number, number]>> = {
   ArrowDown: [0, -1],
 };
 
+const gamepadDeadZone = 0.2;
+const gamepadJumpButton = 0; // A on Xbox
+const gamepadRestartButton = 9; // Menu on Xbox
+
 export function createInput(stick: HTMLElement, jump: HTMLButtonElement, restart: HTMLButtonElement) {
   const listeners = new AbortController();
   const { signal } = listeners;
@@ -17,6 +21,12 @@ export function createInput(stick: HTMLElement, jump: HTMLButtonElement, restart
   let stickPointer: number | null = null;
   let stickX = 0;
   let stickZ = 0;
+  let gamepadX = 0;
+  let gamepadZ = 0;
+  let jumpHeld = false;
+  let restartHeld = false;
+  let syncGamepadButtons = false;
+  let readGamepads: (() => (Gamepad | null)[]) | undefined = navigator.getGamepads?.bind(navigator);
   let jumpRequested = false;
   let restartRequested = false;
 
@@ -32,8 +42,45 @@ export function createInput(stick: HTMLElement, jump: HTMLButtonElement, restart
   function reset() {
     keys.clear();
     releaseStick();
+    gamepadX = 0;
+    gamepadZ = 0;
+    syncGamepadButtons = true;
     jumpRequested = false;
     restartRequested = false;
+  }
+
+  function pollGamepad() {
+    gamepadX = 0;
+    gamepadZ = 0;
+    if (!readGamepads || document.hidden || !document.hasFocus()) return;
+
+    let gamepad: Gamepad | undefined;
+    try {
+      gamepad = readGamepads().find((pad) => pad?.connected && pad.mapping === "standard") ?? undefined;
+    } catch {
+      // A browser can expose the API but block access through Permissions Policy.
+      readGamepads = undefined;
+      return;
+    }
+
+    const x = gamepad?.axes[0] ?? 0;
+    const z = -(gamepad?.axes[1] ?? 0);
+    const length = Math.hypot(x, z);
+    if (length > gamepadDeadZone) {
+      const strength = (Math.min(length, 1) - gamepadDeadZone) / (1 - gamepadDeadZone);
+      gamepadX = x / length * strength;
+      gamepadZ = z / length * strength;
+    }
+
+    const jumpPressed = gamepad?.buttons[gamepadJumpButton]?.pressed ?? false;
+    const restartPressed = gamepad?.buttons[gamepadRestartButton]?.pressed ?? false;
+    if (!syncGamepadButtons) {
+      jumpRequested ||= jumpPressed && !jumpHeld;
+      restartRequested ||= restartPressed && !restartHeld;
+    }
+    jumpHeld = jumpPressed;
+    restartHeld = restartPressed;
+    syncGamepadButtons = false;
   }
 
   function moveStick(event: PointerEvent) {
@@ -96,9 +143,10 @@ export function createInput(stick: HTMLElement, jump: HTMLButtonElement, restart
   document.addEventListener("visibilitychange", reset, { signal });
 
   return {
+    pollGamepad,
     movement() {
-      let x = stickX;
-      let z = stickZ;
+      let x = stickX + gamepadX;
+      let z = stickZ + gamepadZ;
       for (const code of keys) {
         const [dx, dz] = movementKeys[code];
         x += dx;

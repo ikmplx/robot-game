@@ -38,7 +38,7 @@ async function addScoutRobot(scene: Scene, shadows: ShadowGenerator, player: Tra
   shadows.addShadowCaster(robot);
 }
 
-async function addEquipmentCrate(scene: Scene, shadows: ShadowGenerator) {
+async function addEquipmentCrate(scene: Scene, shadows: ShadowGenerator, solids: Solid[]) {
   if (scene.isDisposed) return;
 
   const model = await LoadAssetContainerAsync(kreaCrateUrl, scene);
@@ -60,6 +60,7 @@ async function addEquipmentCrate(scene: Scene, shadows: ShadowGenerator) {
     1.5 - (min.z + max.z) * scale / 2,
   );
   model.addAllToScene();
+  solids.push(crate.getHierarchyBoundingVectors());
   shadows.addShadowCaster(crate);
 }
 
@@ -231,10 +232,11 @@ export function createPlatformerScene(engine: Engine, input: GameInput, status: 
   });
 
   const gltfLoader = import("@babylonjs/loaders/glTF");
-  void gltfLoader.then(() => addEquipmentCrate(scene, shadows)).catch((error: unknown) => {
+  const crateReady = gltfLoader.then(() => addEquipmentCrate(scene, shadows, solids)).catch((error: unknown) => {
     if (!scene.isDisposed) console.warn("Could not load the equipment crate.", error);
   });
-  const modelReady = gltfLoader.then(() => addScoutRobot(scene, shadows, avatar)).then(() => {
+  const robotReady = gltfLoader.then(() => addScoutRobot(scene, shadows, avatar));
+  const modelReady = Promise.all([crateReady, robotReady]).then(() => {
     if (scene.isDisposed) return;
     input.takeJump();
     input.takeRestart();

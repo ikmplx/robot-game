@@ -27,7 +27,10 @@ try {
   const { scene, modelReady } = createPlatformerScene(engine, input, status);
   const resize = new ResizeObserver(() => engine.resize());
   resize.observe(canvas);
-  engine.runRenderLoop(() => scene.render());
+  engine.runRenderLoop(() => {
+    input.pollGamepad();
+    scene.render();
+  });
 
   void modelReady.catch((error: unknown) => {
     if (scene.isDisposed) return;
