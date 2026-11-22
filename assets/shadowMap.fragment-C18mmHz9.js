@@ -1,4 +1,4 @@
-import{t as e}from"./shaderStore-D-XQlhUT.js";import"./index-fPsloNRN.js";var t=`bayerDitherFunctions`,n=`float bayerDither2(vec2 _P) {return mod(2.0*_P.y+_P.x+1.0,4.0);}
+import{t as e}from"./shaderStore-D-XQlhUT.js";import"./index-Cc_5WgrG.js";var t=`bayerDitherFunctions`,n=`float bayerDither2(vec2 _P) {return mod(2.0*_P.y+_P.x+1.0,4.0);}
 float bayerDither4(vec2 _P) {vec2 P1=mod(_P,2.0); 
 vec2 P2=floor(0.5*mod(_P,4.0)); 
 return 4.0*bayerDither2(P1)+bayerDither2(P2);}
