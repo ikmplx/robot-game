@@ -1,5 +1,7 @@
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 
+const contactEpsilon = 1e-7;
+
 export interface Solid {
   min: Vector3;
   max: Vector3;
@@ -27,12 +29,13 @@ export function pushSolid(
   for (const solid of solids) {
     if (solid === body || body.max.y <= solid.min.y || body.min.y >= solid.max.y
       || body.max[other] <= solid.min[other] || body.min[other] >= solid.max[other]) continue;
-    if (distance > 0 && body.max[axis] <= solid.min[axis]) {
+    if (distance > 0 && body.max[axis] <= solid.min[axis] + contactEpsilon) {
       travel = Math.min(travel, solid.min[axis] - body.max[axis]);
-    } else if (distance < 0 && body.min[axis] >= solid.max[axis]) {
+    } else if (distance < 0 && body.min[axis] >= solid.max[axis] - contactEpsilon) {
       travel = Math.max(travel, solid.max[axis] - body.min[axis]);
     }
   }
+  travel = distance > 0 ? Math.max(0, travel) : Math.min(0, travel);
   body.min[axis] += travel;
   body.max[axis] += travel;
   return travel;
@@ -70,10 +73,10 @@ export function createPlayer(solids: Solid[], spawn: Vector3) {
 
       const nearEdge = solid.min[axis] - playerRadius;
       const farEdge = solid.max[axis] + playerRadius;
-      if (distance > 0 && previous <= nearEdge && next > nearEdge) {
+      if (distance > 0 && previous <= nearEdge + contactEpsilon && next > nearEdge) {
         next = nearEdge;
         obstacle = solid;
-      } else if (distance < 0 && previous >= farEdge && next < farEdge) {
+      } else if (distance < 0 && previous >= farEdge - contactEpsilon && next < farEdge) {
         next = farEdge;
         obstacle = solid;
       }

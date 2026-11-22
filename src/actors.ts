@@ -58,15 +58,17 @@ export function createActors(scene: Scene, workshop: Workshop) {
   box("Energy blade", [0.84, 0.13, 0.21], [0.96, 0, 0], blade, baton);
   baton.setEnabled(false);
 
-  function drawScout(clock: number, moving: boolean, grounded: boolean, swing: number, flashing: boolean) {
+  function drawScout(clock: number, moving: boolean, grounded: boolean, swing: number, flashing: boolean, hanging: boolean) {
     const stride = moving && grounded ? Math.sin(clock * 16) * 0.63 : 0;
     rig.position.y = Math.abs(stride) * 0.095;
     rig.setEnabled(!flashing || Math.floor(clock * 18) % 2 === 0);
-    legs[0].rotation.x = stride;
-    legs[1].rotation.x = -stride;
-    arms[0].rotation.x = -stride * 0.55;
-    arms[1].rotation.x = stride * 0.55;
-    arms[1].rotation.z = swing > 0 ? 1.15 : 0;
+    legs[0].rotation.x = hanging ? -0.46 : stride;
+    legs[1].rotation.x = hanging ? -0.28 : -stride;
+    for (const [index, arm] of arms.entries()) {
+      arm.position.y = hanging ? 1.18 : 0.99;
+      arm.rotation.x = hanging ? -2.77 : stride * (index === 0 ? -0.55 : 0.55);
+      arm.rotation.z = hanging ? (index === 0 ? -0.32 : 0.32) : index === 1 && swing > 0 ? 1.15 : 0;
+    }
     baton.setEnabled(swing > 0);
     baton.rotation.y = -2.5 + 3.45 * swing;
   }
