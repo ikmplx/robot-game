@@ -1,3 +1,5 @@
+import { createCatPuzzle } from "./cat-puzzle";
+
 type View = {
   health: number;
   coins: number;
@@ -21,12 +23,20 @@ export function createHud(actions: { unlockDoor: () => void; restart: () => void
   const result = document.querySelector<HTMLElement>("#result")!;
   const resultCoins = document.querySelector<HTMLElement>("#result-coins")!;
   const dialog = document.querySelector<HTMLDialogElement>("#activity")!;
-  const title = document.querySelector<HTMLElement>("#activity-title")!;
-  const copy = document.querySelector<HTMLElement>("#activity-copy")!;
   const close = document.querySelector<HTMLButtonElement>("#close-activity")!;
   const lessonList = document.querySelector<HTMLElement>("#lesson-list")!;
-  const completeMinigame = document.querySelector<HTMLButtonElement>("#complete-minigame")!;
   const canvas = document.querySelector<HTMLCanvasElement>("#scene")!;
+
+  function resumeGame() {
+    actions.clearInput();
+    canvas.focus();
+  }
+
+  const puzzle = createCatPuzzle({
+    pauseGame: actions.clearInput,
+    resumeGame,
+    solve: actions.unlockDoor,
+  }, options);
 
   function countStars() {
     return lessonButtons.filter((button) => button.disabled).length;
@@ -59,45 +69,34 @@ export function createHud(actions: { unlockDoor: () => void; restart: () => void
     return button;
   });
 
-  function showActivity(kind: "lessons" | "minigame") {
-    if (dialog.open) return;
-    const lessons = kind === "lessons";
-    title.textContent = lessons ? "Уроки" : "Замок двери";
-    copy.textContent = lessons
-      ? "Зачтите три урока, чтобы получить три звезды. Каждый урок пока заменён кнопкой."
-      : "В прототипе мини-игру заменяет кнопка. Завершите её, чтобы открыть дверь.";
-    lessonList.hidden = !lessons;
-    completeMinigame.hidden = lessons;
+  function showLessons() {
+    if (dialog.open || puzzle.open) return;
     actions.clearInput();
     dialog.showModal();
-    (lessons ? close : completeMinigame).focus();
+    close.focus();
   }
 
-  document.querySelector("#lessons")!.addEventListener("click", () => showActivity("lessons"), options);
+  document.querySelector("#lessons")!.addEventListener("click", showLessons, options);
   document.querySelector("#play-again")!.addEventListener("click", () => {
     actions.restart();
     canvas.focus();
   }, options);
   close.addEventListener("click", () => dialog.close(), options);
-  dialog.addEventListener("close", () => {
-    actions.clearInput();
-    canvas.focus();
-  }, options);
-  completeMinigame.addEventListener("click", () => {
-    actions.unlockDoor();
-    dialog.close();
-  }, options);
+  dialog.addEventListener("close", resumeGame, options);
 
   function setText(element: HTMLElement, value: string) {
     if (element.textContent !== value) element.textContent = value;
   }
 
   return {
-    get paused() { return dialog.open; },
+    get paused() { return dialog.open || puzzle.open; },
     countStars,
-    showLessons: () => showActivity("lessons"),
-    showMinigame: () => showActivity("minigame"),
+    showLessons,
+    showMinigame() {
+      if (!dialog.open && countStars() === 3) puzzle.show();
+    },
     reset() {
+      puzzle.reset();
       for (const [index, button] of lessonButtons.entries()) {
         button.disabled = false;
         button.textContent = "Зачесть";
@@ -126,6 +125,7 @@ export function createHud(actions: { unlockDoor: () => void; restart: () => void
     dispose() {
       if (dialog.open) dialog.close();
       lessonList.replaceChildren();
+      puzzle.dispose();
       events.abort();
     },
   };

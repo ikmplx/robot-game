@@ -56,14 +56,43 @@
         <button id="play-again" class="primary" type="button">Играть снова</button>
       </section>
 
-      <dialog id="activity" aria-labelledby="activity-title">
+      <dialog id="activity" aria-labelledby="activity-title" aria-describedby="activity-copy">
         <div class="activity-heading">
-          <h2 id="activity-title"></h2>
+          <h2 id="activity-title">Уроки</h2>
           <button id="close-activity" class="icon-button" type="button" aria-label="Закрыть">×</button>
         </div>
-        <p id="activity-copy"></p>
+        <p id="activity-copy">Зачтите три урока, чтобы получить три звезды. Каждый урок пока заменён кнопкой.</p>
         <div id="lesson-list"></div>
-        <button id="complete-minigame" class="primary" type="button">Завершить мини-игру</button>
+      </dialog>
+
+      <dialog id="cat-lock" class="puzzle-dialog" aria-labelledby="puzzle-title" aria-describedby="puzzle-instructions">
+        <header class="puzzle-heading">
+          <div class="puzzle-emblem" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+          <div>
+            <h2 id="puzzle-title">Кошачья мозаика</h2>
+            <p id="puzzle-instructions">Выберите две плитки, чтобы поменять их местами.</p>
+          </div>
+          <button id="close-puzzle" class="icon-button" type="button" aria-label="Закрыть мозаику">×</button>
+        </header>
+        <div class="puzzle-layout">
+          <div class="puzzle-frame">
+            <div id="puzzle-board" class="puzzle-board" role="group" aria-label="Мозаика, 2 ряда по 4 плитки"></div>
+          </div>
+          <aside class="puzzle-sidebar">
+            <figure class="puzzle-reference">
+              <img id="puzzle-preview" width="1200" height="800" alt="Рыжий кот с зелёными глазами">
+              <figcaption>Образец</figcaption>
+            </figure>
+            <div class="puzzle-progress">
+              <p id="puzzle-status" role="status"></p>
+              <progress id="puzzle-progress" max="8" value="0" aria-label="Плитки на своих местах"></progress>
+            </div>
+          </aside>
+        </div>
+        <footer class="puzzle-actions">
+          <button id="shuffle-puzzle" type="button"><span aria-hidden="true">↻</span> Перемешать</button>
+          <button id="leave-puzzle" class="primary" type="button" hidden>Продолжить</button>
+        </footer>
       </dialog>
 
       <p id="scene-error" role="alert" hidden></p>

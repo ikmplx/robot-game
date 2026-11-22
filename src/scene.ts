@@ -18,7 +18,7 @@ const attackSeconds = 0.34;
 
 const prompts = {
   lessons: "К урокам",
-  minigame: "Начать мини-игру",
+  minigame: "Собрать мозаику",
   lift: "Подняться на полку",
   resetCrates: "Сбросить кубы",
 };
@@ -337,7 +337,7 @@ export function createPlatformerScene(engine: Engine, input: GameInput) {
     if (ridingLift) return "Лифт поднимается на полку";
     if (checkpoint === route.shelf.checkpoint) {
       if (!shelfFight.cleared) return "Победите монстров на полке";
-      return hud.countStars() < 3 ? "Соберите 3 звезды для двери" : "Откройте замок двери";
+      return hud.countStars() < 3 ? "Соберите 3 звезды для двери" : "Соберите мозаику у двери";
     }
     if (placedCrates === level.crates.length) return "Поднимитесь на полку";
     if (floorFight.cleared) return `Толкайте кубы на метки · ${placedCrates} / ${level.crates.length}`;
