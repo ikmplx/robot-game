@@ -1,0 +1,1 @@
+export{d as PBRMaterial}from"./glTF-C-0SCRBC.js";

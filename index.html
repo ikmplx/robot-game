@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Робот на платформе</title>
+    <script type="module" crossorigin src="/robot-game/assets/index-C6gjve3w.js"></script>
+    <link rel="modulepreload" crossorigin href="/robot-game/assets/rolldown-runtime-DK3Fl9T5.js">
+    <link rel="modulepreload" crossorigin href="/robot-game/assets/observable-BmPG9gPP.js">
+    <link rel="modulepreload" crossorigin href="/robot-game/assets/performanceConfigurator-BmjQrsSV.js">
+    <link rel="modulepreload" crossorigin href="/robot-game/assets/devTools-DmD3AOL3.js">
+    <link rel="modulepreload" crossorigin href="/robot-game/assets/precisionDate-CfCevjl-.js">
+    <link rel="modulepreload" crossorigin href="/robot-game/assets/logger-CuBYPcDK.js">
+    <link rel="modulepreload" crossorigin href="/robot-game/assets/shaderStore-D-XQlhUT.js">
+    <link rel="modulepreload" crossorigin href="/robot-game/assets/abstractEngine-D96vBddz.js">
+    <link rel="modulepreload" crossorigin href="/robot-game/assets/dataBuffer-C-wqV4qF.js">
+    <link rel="modulepreload" crossorigin href="/robot-game/assets/thinEngine-CxBbUxVJ.js">
+    <link rel="modulepreload" crossorigin href="/robot-game/assets/typeStore-Cu_sj2zM.js">
+    <link rel="modulepreload" crossorigin href="/robot-game/assets/math.scalar.functions-Bcxiuh2E.js">
+    <link rel="modulepreload" crossorigin href="/robot-game/assets/math.vector-Ct6Oc_tm.js">
+    <link rel="modulepreload" crossorigin href="/robot-game/assets/math.color-DEkuF3wJ.js">
+    <link rel="modulepreload" crossorigin href="/robot-game/assets/math.plane-BDm7EIUd.js">
+    <link rel="modulepreload" crossorigin href="/robot-game/assets/decorators-BOtej2xA.js">
+    <link rel="modulepreload" crossorigin href="/robot-game/assets/guid-BXdVC_j_.js">
+    <link rel="modulepreload" crossorigin href="/robot-game/assets/webRequest-dqz0dHXK.js">
+    <link rel="modulepreload" crossorigin href="/robot-game/assets/tools-5_wp_RhL.js">
+    <link rel="modulepreload" crossorigin href="/robot-game/assets/decorators.serialization-BNFeUGZZ.js">
+    <link rel="modulepreload" crossorigin href="/robot-game/assets/texture-DMDcjeD3.js">
+    <link rel="modulepreload" crossorigin href="/robot-game/assets/buffer-DfOg1Czm.js">
+    <link rel="modulepreload" crossorigin href="/robot-game/assets/postprocess.vertex-CqEQ0GqR.js">
+    <link rel="modulepreload" crossorigin href="/robot-game/assets/postprocess.vertex-3K0axN5Y.js">
+    <link rel="modulepreload" crossorigin href="/robot-game/assets/effectRenderer-BA3LpEx-.js">
+    <link rel="modulepreload" crossorigin href="/robot-game/assets/lightConstants-_xsYUOSS.js">
+    <link rel="stylesheet" crossorigin href="/robot-game/assets/index-h5WtPdAB.css">
+  </head>
+  <body>
+    <main class="viewport">
+      <canvas id="scene" aria-label="Трёхмерная трасса с платформами"></canvas>
+      <div class="overlay">
+        <div>
+          <h1>Доберитесь до маяка</h1>
+          <p class="controls">WASD / стрелки · пробел — прыжок</p>
+        </div>
+        <button id="restart" type="button">Заново</button>
+      </div>
+      <p id="game-status" role="status">Загрузка…</p>
+      <div class="touch-controls">
+        <div id="stick" aria-hidden="true"><span></span></div>
+        <button id="jump" type="button">Прыжок</button>
+      </div>
+      <p id="scene-error" role="alert" hidden></p>
+    </main>
+  </body>
+</html>
