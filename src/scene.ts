@@ -7,9 +7,10 @@ import "@babylonjs/core/Lights/Shadows/shadowGeneratorSceneComponent";
 import { Color3, Color4 } from "@babylonjs/core/Maths/math.color";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { Scene } from "@babylonjs/core/scene";
-import { createActors } from "./actors";
+import { createCranes } from "./actors";
 import { createAnnex } from "./annex";
 import { createGuardian } from "./boss";
+import { createHero } from "./hero";
 import { createHud } from "./hud";
 import type { GameInput } from "./input";
 import { createLevel, createWorkshop } from "./level";
@@ -38,7 +39,7 @@ function horizontalDistance(a: Vector3, b: Vector3) {
   return Math.hypot(a.x - b.x, a.z - b.z);
 }
 
-export function createPlatformerScene(engine: Engine, input: GameInput) {
+export async function createPlatformerScene(engine: Engine, input: GameInput) {
   const scene = new Scene(engine);
   const roomBackground = Color4.FromHexString("#213251FF");
   const darkBackground = new Color4(0, 0, 0, 1);
@@ -68,14 +69,15 @@ export function createPlatformerScene(engine: Engine, input: GameInput) {
 
   const solids: Solid[] = [];
   const workshop = createWorkshop(scene, shadows);
+  const { avatar, draw: drawHero } = await createHero(scene, workshop);
+  const createCrane = createCranes(scene, workshop);
   const level = createLevel(scene, workshop, solids);
   const annex = createAnnex(scene, workshop, solids);
   const guardian = createGuardian(scene, workshop);
   const chest = createTreasureChest(scene, workshop, solids);
-  const { avatar, drawScout, monster } = createActors(scene, workshop);
   const fights = arenas.map((zone, index) => ({
     zone,
-    enemies: zone.enemies.map(([x, z]) => monster("Paper crane", new Vector3(x, zone.top, z))),
+    enemies: zone.enemies.map(([x, z]) => createCrane("Paper crane", new Vector3(x, zone.top, z))),
     setBarrier: level.fightBarriers[index],
     cleared: false,
   }));
@@ -535,7 +537,7 @@ export function createPlatformerScene(engine: Engine, input: GameInput) {
     avatar.setEnabled(!fullyDark || scoutLit);
     avatar.position.copyFrom(position);
     avatar.rotation.y = facing;
-    drawScout(clock, moving && !ride && !finished, player.grounded,
+    drawHero(clock, moving && !ride && !finished, player.grounded || ride?.kind === "lift",
       swing / attackSeconds, invulnerable > 0, ride?.kind === "zipline");
     for (const fight of fights) for (const enemy of fight.enemies) enemy.draw(clock);
     guardian.draw(clock, position);

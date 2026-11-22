@@ -5,6 +5,7 @@ import { createPlatformerScene } from "./scene";
 import "./style.css";
 
 const canvas = document.querySelector<HTMLCanvasElement>("#scene")!;
+const loading = document.querySelector<HTMLParagraphElement>("#scene-loading")!;
 const errorMessage = document.querySelector<HTMLParagraphElement>("#scene-error")!;
 const cleanupFullscreen = setupFullscreen(
   document.querySelector<HTMLElement>(".viewport")!,
@@ -13,8 +14,16 @@ const cleanupFullscreen = setupFullscreen(
 );
 import.meta.hot?.dispose(cleanupFullscreen);
 
-try {
+let disposed = false;
+const cleanup: (() => void)[] = [];
+import.meta.hot?.dispose(() => {
+  disposed = true;
+  for (const release of cleanup.splice(0).reverse()) release();
+});
+
+async function start() {
   const engine = new Engine(canvas, true);
+  cleanup.push(() => engine.dispose());
   engine.setHardwareScalingLevel(1 / Math.min(window.devicePixelRatio, 1.5));
   const input = createInput(
     canvas,
@@ -24,21 +33,25 @@ try {
     document.querySelector<HTMLButtonElement>("#interact")!,
     document.querySelector<HTMLButtonElement>("#restart")!,
   );
-  const scene = createPlatformerScene(engine, input);
+  cleanup.push(input.dispose);
+  const scene = await createPlatformerScene(engine, input);
+  if (disposed) return;
   const resize = new ResizeObserver(() => engine.resize());
   resize.observe(canvas);
+  cleanup.push(() => resize.disconnect());
   engine.runRenderLoop(() => {
     input.pollGamepad();
     scene.render();
   });
 
-  import.meta.hot?.dispose(() => {
-    input.dispose();
-    resize.disconnect();
-    engine.dispose();
-  });
-} catch (error) {
-  console.error(error);
-  errorMessage.textContent = "Не удалось запустить 3D-сцену. Проверьте поддержку WebGL в браузере.";
-  errorMessage.hidden = false;
+  loading.hidden = true;
 }
+
+void start().catch((error: unknown) => {
+  if (disposed) return;
+  for (const release of cleanup.splice(0).reverse()) release();
+  console.error(error);
+  loading.hidden = true;
+  errorMessage.textContent = "Не удалось загрузить 3D-сцену. Обновите страницу и проверьте поддержку WebGL.";
+  errorMessage.hidden = false;
+});
