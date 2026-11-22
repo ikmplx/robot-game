@@ -4,6 +4,7 @@ import { DirectionalLight } from "@babylonjs/core/Lights/directionalLight";
 import { HemisphericLight } from "@babylonjs/core/Lights/hemisphericLight";
 import { ShadowGenerator } from "@babylonjs/core/Lights/Shadows/shadowGenerator";
 import "@babylonjs/core/Lights/Shadows/shadowGeneratorSceneComponent";
+import { LoadAssetContainerAsync } from "@babylonjs/core/Loading/sceneLoader";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Texture } from "@babylonjs/core/Materials/Textures/texture";
 import { Color3, Color4 } from "@babylonjs/core/Maths/math.color";
@@ -12,8 +13,27 @@ import { CreateBox } from "@babylonjs/core/Meshes/Builders/boxBuilder";
 import { CreateGround } from "@babylonjs/core/Meshes/Builders/groundBuilder";
 import { Scene } from "@babylonjs/core/scene";
 import floorTextureUrl from "./assets/floor.png?no-inline";
+import scoutRobotUrl from "./assets/scout-robot.glb?url&no-inline";
 
-export function createTestScene(engine: Engine, canvas: HTMLCanvasElement): Scene {
+async function addScoutRobot(scene: Scene, shadows: ShadowGenerator) {
+  await import("@babylonjs/loaders/glTF");
+  if (scene.isDisposed) return;
+
+  const model = await LoadAssetContainerAsync(scoutRobotUrl, scene);
+  if (scene.isDisposed) {
+    model.dispose();
+    return;
+  }
+
+  const robot = model.createRootMesh();
+  robot.name = "Scout robot placement";
+  robot.position.set(0.35, 0.95, 0.15);
+  robot.rotation.y = Math.PI / 12;
+  model.addAllToScene();
+  shadows.addShadowCaster(robot);
+}
+
+export function createTestScene(engine: Engine, canvas: HTMLCanvasElement) {
   const scene = new Scene(engine);
   scene.clearColor = Color4.FromHexString("#101C21FF");
 
@@ -96,5 +116,5 @@ export function createTestScene(engine: Engine, canvas: HTMLCanvasElement): Scen
   block("platform edge two", [2.44, 0.08, 0.09], [0.35, 0.925, -0.81], accent);
   block("platform edge three", [3.14, 0.08, 0.09], [3.85, 1.425, 0.44], accent);
 
-  return scene;
+  return { scene, modelReady: addScoutRobot(scene, shadows) };
 }
