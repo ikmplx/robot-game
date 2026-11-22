@@ -1,8 +1,8 @@
 {
-  "name": "Робот на платформе",
-  "short_name": "Робот",
+  "name": "Рубеж",
+  "short_name": "Рубеж",
   "start_url": "./",
   "display": "standalone",
-  "background_color": "#101c21",
-  "theme_color": "#101c21"
+  "background_color": "#10101d",
+  "theme_color": "#10101d"
 }

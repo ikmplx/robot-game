@@ -15,30 +15,21 @@ import.meta.hot?.dispose(cleanupFullscreen);
 
 try {
   const engine = new Engine(canvas, true);
-  // Cap the pixel ratio to keep the render target small on high-density phones.
   engine.setHardwareScalingLevel(1 / Math.min(window.devicePixelRatio, 1.5));
-
-  const status = document.querySelector<HTMLElement>("#game-status")!;
   const input = createInput(
+    canvas,
     document.querySelector<HTMLElement>("#stick")!,
     document.querySelector<HTMLButtonElement>("#jump")!,
+    document.querySelector<HTMLButtonElement>("#attack")!,
+    document.querySelector<HTMLButtonElement>("#interact")!,
     document.querySelector<HTMLButtonElement>("#restart")!,
   );
-  const { scene, modelReady } = createPlatformerScene(engine, input, status);
+  const scene = createPlatformerScene(engine, input);
   const resize = new ResizeObserver(() => engine.resize());
   resize.observe(canvas);
   engine.runRenderLoop(() => {
     input.pollGamepad();
     scene.render();
-  });
-
-  void modelReady.catch((error: unknown) => {
-    if (scene.isDisposed) return;
-
-    console.error(error);
-    status.hidden = true;
-    errorMessage.textContent = "Не удалось загрузить модель робота.";
-    errorMessage.hidden = false;
   });
 
   import.meta.hot?.dispose(() => {

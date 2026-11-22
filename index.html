@@ -3,31 +3,69 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#101c21" />
+    <meta name="theme-color" content="#10101d" />
     <link rel="manifest" href="/game.webmanifest" />
-    <title>Робот на платформе</title>
+    <title>Рубеж</title>
   </head>
   <body>
     <main class="viewport">
-      <canvas id="scene" aria-label="Трёхмерная трасса с платформами"></canvas>
-      <div class="overlay">
-        <div>
-          <h1>Доберитесь до маяка</h1>
-          <p class="controls">WASD / стрелки · пробел — прыжок</p>
+      <canvas id="scene" tabindex="-1" aria-label="Трёхмерный уровень с платформами"></canvas>
+
+      <header class="overlay">
+        <div class="mission">
+          <h1>Рубеж</h1>
+          <p id="objective" role="status">Перепрыгните по кубам</p>
         </div>
-        <div class="overlay-actions">
-          <button id="restart" type="button">Заново</button>
-          <button id="fullscreen" type="button" aria-label="На весь экран" title="На весь экран" hidden>
-            <span aria-hidden="true">⛶</span>
-          </button>
-          <p id="fullscreen-status" role="status"></p>
+        <div class="hud">
+          <div class="counters">
+            <span id="health" class="health" aria-label="Здоровье 3 из 3">♥♥♥</span>
+            <span class="counter"><span class="coin-icon" aria-hidden="true"></span><span id="coins" aria-label="Монеты: 0">0</span></span>
+            <span class="counter stars"><span aria-hidden="true">★</span><span id="stars" aria-label="Звёзды: 0 из 3">0 / 3</span></span>
+          </div>
+          <div class="overlay-actions">
+            <button id="lessons" class="primary" type="button">Уроки</button>
+            <button id="restart" class="icon-button" type="button" aria-label="Заново" title="Заново (R)">↻</button>
+            <button id="fullscreen" class="icon-button" type="button" aria-label="На весь экран" hidden>⛶</button>
+            <p id="fullscreen-status" role="status"></p>
+          </div>
         </div>
+      </header>
+
+      <div class="context">
+        <p id="feedback" role="status" hidden></p>
+        <button id="interact" type="button" hidden><kbd>E</kbd><span></span></button>
       </div>
-      <p id="game-status" role="status">Загрузка…</p>
+
+      <div class="keyboard-guide" aria-label="Управление">
+        <span><kbd>WASD</kbd> Движение</span>
+        <span><kbd>Пробел</kbd> Прыжок</span>
+        <span><kbd>ЛКМ</kbd> Удар</span>
+      </div>
+
       <div class="touch-controls">
         <div id="stick" aria-hidden="true"><span></span></div>
-        <button id="jump" type="button">Прыжок</button>
+        <div class="touch-actions">
+          <button id="attack" type="button">Удар</button>
+          <button id="jump" type="button">Прыжок</button>
+        </div>
       </div>
+
+      <section id="result" class="result" aria-labelledby="result-title" hidden>
+        <h2 id="result-title">Уровень пройден</h2>
+        <p id="result-coins"></p>
+        <button id="play-again" class="primary" type="button">Играть снова</button>
+      </section>
+
+      <dialog id="activity" aria-labelledby="activity-title">
+        <div class="activity-heading">
+          <h2 id="activity-title"></h2>
+          <button id="close-activity" class="icon-button" type="button" aria-label="Закрыть">×</button>
+        </div>
+        <p id="activity-copy"></p>
+        <div id="lesson-list"></div>
+        <button id="complete-minigame" class="primary" type="button">Завершить мини-игру</button>
+      </dialog>
+
       <p id="scene-error" role="alert" hidden></p>
     </main>
     <script type="module" src="/src/main.ts"></script>

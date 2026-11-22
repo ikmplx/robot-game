@@ -11,9 +11,18 @@ const movementKeys: Readonly<Record<string, [number, number]>> = {
 
 const gamepadDeadZone = 0.2;
 const gamepadJumpButton = 0; // A on Xbox
+const gamepadAttackButton = 2; // X on Xbox
+const gamepadInteractButton = 3; // Y on Xbox
 const gamepadRestartButton = 9; // Menu on Xbox
 
-export function createInput(stick: HTMLElement, jump: HTMLButtonElement, restart: HTMLButtonElement) {
+export function createInput(
+  canvas: HTMLCanvasElement,
+  stick: HTMLElement,
+  jump: HTMLButtonElement,
+  attack: HTMLButtonElement,
+  interact: HTMLButtonElement,
+  restart: HTMLButtonElement,
+) {
   const listeners = new AbortController();
   const { signal } = listeners;
   const keys = new Set<string>();
@@ -24,10 +33,14 @@ export function createInput(stick: HTMLElement, jump: HTMLButtonElement, restart
   let gamepadX = 0;
   let gamepadZ = 0;
   let jumpHeld = false;
+  let attackHeld = false;
+  let interactHeld = false;
   let restartHeld = false;
   let syncGamepadButtons = false;
   let readGamepads: (() => (Gamepad | null)[]) | undefined = navigator.getGamepads?.bind(navigator);
   let jumpRequested = false;
+  let attackRequested = false;
+  let interactRequested = false;
   let restartRequested = false;
 
   function releaseStick() {
@@ -46,6 +59,8 @@ export function createInput(stick: HTMLElement, jump: HTMLButtonElement, restart
     gamepadZ = 0;
     syncGamepadButtons = true;
     jumpRequested = false;
+    attackRequested = false;
+    interactRequested = false;
     restartRequested = false;
   }
 
@@ -73,12 +88,18 @@ export function createInput(stick: HTMLElement, jump: HTMLButtonElement, restart
     }
 
     const jumpPressed = gamepad?.buttons[gamepadJumpButton]?.pressed ?? false;
+    const attackPressed = gamepad?.buttons[gamepadAttackButton]?.pressed ?? false;
+    const interactPressed = gamepad?.buttons[gamepadInteractButton]?.pressed ?? false;
     const restartPressed = gamepad?.buttons[gamepadRestartButton]?.pressed ?? false;
     if (!syncGamepadButtons) {
       jumpRequested ||= jumpPressed && !jumpHeld;
+      attackRequested ||= attackPressed && !attackHeld;
+      interactRequested ||= interactPressed && !interactHeld;
       restartRequested ||= restartPressed && !restartHeld;
     }
     jumpHeld = jumpPressed;
+    attackHeld = attackPressed;
+    interactHeld = interactPressed;
     restartHeld = restartPressed;
     syncGamepadButtons = false;
   }
@@ -113,13 +134,28 @@ export function createInput(stick: HTMLElement, jump: HTMLButtonElement, restart
       if (event.pointerId === stickPointer) releaseStick();
     }, { signal });
   }
-  jump.addEventListener("pointerdown", (event) => {
-    if (event.button !== 0) return;
+  function bindTouchButton(button: HTMLButtonElement, request: () => void) {
+    button.addEventListener("pointerdown", (event) => {
+      if (event.button !== 0) return;
+      event.preventDefault();
+      request();
+    }, { signal });
+    button.addEventListener("click", (event) => {
+      if (event.detail === 0) request();
+    }, { signal });
+  }
+
+  bindTouchButton(jump, () => { jumpRequested = true; });
+  bindTouchButton(attack, () => { attackRequested = true; });
+  canvas.addEventListener("pointerdown", (event) => {
+    if (event.pointerType !== "mouse" || event.button !== 0) return;
     event.preventDefault();
-    jumpRequested = true;
+    canvas.focus();
+    attackRequested = true;
   }, { signal });
-  jump.addEventListener("click", (event) => {
-    if (event.detail === 0) jumpRequested = true;
+  interact.addEventListener("click", () => {
+    interactRequested = true;
+    interact.blur();
   }, { signal });
   restart.addEventListener("click", (event) => {
     restartRequested = true;
@@ -127,13 +163,16 @@ export function createInput(stick: HTMLElement, jump: HTMLButtonElement, restart
   }, { signal });
 
   window.addEventListener("keydown", (event) => {
-    if (event.altKey || event.ctrlKey || event.metaKey || event.defaultPrevented) return;
+    if (event.altKey || event.ctrlKey || event.metaKey || event.defaultPrevented
+      || (event.target instanceof HTMLElement && event.target.closest("dialog"))) return;
     if (event.code in movementKeys) {
       keys.add(event.code);
       event.preventDefault();
     } else if (event.code === "Space" && !(event.target instanceof HTMLButtonElement)) {
       event.preventDefault();
       if (!event.repeat) jumpRequested = true;
+    } else if (event.code === "KeyE" && !event.repeat) {
+      interactRequested = true;
     } else if (event.code === "KeyR" && !event.repeat) {
       restartRequested = true;
     }
@@ -143,6 +182,7 @@ export function createInput(stick: HTMLElement, jump: HTMLButtonElement, restart
   document.addEventListener("visibilitychange", reset, { signal });
 
   return {
+    reset,
     pollGamepad,
     movement() {
       let x = stickX + gamepadX;
@@ -158,6 +198,16 @@ export function createInput(stick: HTMLElement, jump: HTMLButtonElement, restart
     takeJump() {
       const requested = jumpRequested;
       jumpRequested = false;
+      return requested;
+    },
+    takeAttack() {
+      const requested = attackRequested;
+      attackRequested = false;
+      return requested;
+    },
+    takeInteract() {
+      const requested = interactRequested;
+      interactRequested = false;
       return requested;
     },
     takeRestart() {
