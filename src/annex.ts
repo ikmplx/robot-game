@@ -32,8 +32,9 @@ export function createAnnex(scene: Scene, workshop: Workshop, solids: Solid[]) {
   const minX = x - halfWidth;
   const mazeMeshes = new Set<AbstractMesh>();
   const surfaces: { mesh: AbstractMesh; wall: boolean }[] = [];
-  const candleRange = cell * 1.9;
-  let keyCandlesLit = 0;
+  const candleRange = cell * 2.35;
+  const entranceRange = cell * 3.1;
+  let scoutMeshes: AbstractMesh[] = [];
 
   function mazeSurface(mesh: AbstractMesh, wall: boolean) {
     mazeMeshes.add(mesh);
@@ -59,15 +60,14 @@ export function createAnnex(scene: Scene, workshop: Workshop, solids: Solid[]) {
     box("Annex upper trim", [0.42, 0.11, 69], [wallX, top + wallHeight - 0.06, 257.5], cap);
   }
 
-  function grille(name: string, z: number, width: number, surface: StandardMaterial, inMaze = false) {
+  function grille(name: string, z: number, width: number) {
     const root = new TransformNode(name, scene);
     root.position.set(x, top, z);
     const barCount = Math.ceil(width / 0.33);
     for (let i = 0; i <= barCount; i++) {
-      box("Portcullis bar", [0.08, 2.96, 0.13], [width * (i / barCount - 0.5), 1.48, 0], surface, root);
+      box("Portcullis bar", [0.08, 2.96, 0.13], [width * (i / barCount - 0.5), 1.48, 0], metal, root);
     }
     for (const h of [0.27, 2.66]) box("Portcullis rail", [width, 0.15, 0.12], [0, h, 0], cap, root);
-    if (inMaze) for (const mesh of root.getChildMeshes()) mazeSurface(mesh, false);
     const solid: Solid = {
       min: new Vector3(x - width / 2, top, z - 0.1),
       max: new Vector3(x + width / 2, top + 2.96, z + 0.1),
@@ -80,20 +80,25 @@ export function createAnnex(scene: Scene, workshop: Workshop, solids: Solid[]) {
     };
   }
 
-  const setMazeExit = grille("Candle grille", back - 0.33, cell + 0.04, metal, true);
+  for (const side of [-1, 1]) {
+    mazeSurface(box("Maze exit jamb", [0.25, 2.95, 0.45],
+      [x + side * (cell / 2 - 0.06), top + 1.475, back - 0.28], metal), false);
+  }
+  mazeSurface(box("Maze exit lintel", [cell + 0.19, 0.26, 0.45], [x, top + 2.82, back - 0.28], metal), false);
+
   function arenaGate(name: string, z: number, opening: number) {
     for (const side of [-1, 1]) {
       const width = halfWidth - opening / 2;
       solidBlock("Arena buttress", [width, 3.15, 0.6],
         [x + side * (opening + width) / 2, top + 1.575, z], stone);
     }
-    return grille(name, z, opening, metal);
+    return grille(name, z, opening);
   }
   const setArenaEntrance = arenaGate("Arena entrance grille", bossArena.front, 6.8);
   const setArenaExit = arenaGate("Guardian grille", bossArena.back, 3.5);
   solidBlock("Annex end wall", [halfWidth * 2, 3, 0.52], [x, top + 1.5, 291.85], stone);
 
-  const slots: { position: Vector3; key: boolean }[] = [];
+  const slots: { position: Vector3; entrance: boolean }[] = [];
   for (const [rowIndex, row] of rows.entries()) {
     const z = front + (rowIndex + 0.5) * cell;
     for (const [column, kind] of [...row].entries()) {
@@ -106,12 +111,13 @@ export function createAnnex(scene: Scene, workshop: Workshop, solids: Solid[]) {
       } else {
         const surface = (column + rowIndex) % 2 ? tile : alternateTile;
         mazeSurface(box("Maze slate tile", [cell - 0.025, 0.026, cell - 0.025], [px, top + 0.006, z], surface), false);
-        if (kind !== ".") slots.push({ position: new Vector3(px, top, kind === "A" ? front + 1.3 : z), key: kind !== "*" });
+        if (kind !== ".") {
+          const entrance = kind === "A";
+          slots.push({ position: new Vector3(px, top, entrance ? front + 1.95 : z), entrance });
+        }
       }
     }
   }
-  const totalCandles = slots.filter(({ key }) => key).length;
-
   function cellAt(x: number, z: number) {
     return rows[Math.floor((z - front) / cell)]?.[Math.floor((x - minX) / cell)];
   }
@@ -125,8 +131,8 @@ export function createAnnex(scene: Scene, workshop: Workshop, solids: Solid[]) {
   }
 
   const cardinal = [[1, 0], [-1, 0], [0, 1], [0, -1]];
-  function receivesCandleLight(position: Vector3, surface: Vector3, wall: boolean) {
-    if (Math.hypot(position.x - surface.x, position.z - surface.z) > candleRange + cell / 2) return false;
+  function receivesCandleLight(position: Vector3, surface: Vector3, wall: boolean, range: number) {
+    if (Math.hypot(position.x - surface.x, position.z - surface.z) > range + cell / 2) return false;
     if (!wall) return pathClear(position, surface);
     return cardinal.some(([dx, dz]) => {
       const face = new Vector3(surface.x + dx * (cell / 2 + 0.08), top, surface.z + dz * (cell / 2 + 0.08));
@@ -135,12 +141,12 @@ export function createAnnex(scene: Scene, workshop: Workshop, solids: Solid[]) {
     });
   }
 
-  const candles = slots.map(({ position, key }, index) => {
-    const pedestal = key ? 0.34 : 0.12;
-    const base = CreateCylinder("Candle holder", { diameter: key ? 0.74 : 0.46, height: pedestal, tessellation: 18 }, scene);
+  const candles = slots.map(({ position, entrance }, index) => {
+    const pedestal = entrance ? 0.56 : 0.32;
+    const base = CreateCylinder("Candle holder", { diameter: entrance ? 0.83 : 0.61, height: pedestal, tessellation: 18 }, scene);
     base.position.copyFrom(position).y += pedestal / 2;
     base.material = metal;
-    const candle = CreateCylinder("Wax candle", { diameter: key ? 0.32 : 0.25, height: 0.58, tessellation: 16 }, scene);
+    const candle = CreateCylinder("Wax candle", { diameter: entrance ? 0.37 : 0.28, height: 0.58, tessellation: 16 }, scene);
     candle.position.copyFrom(position).y += pedestal + 0.29;
     candle.material = wax;
     const wickMesh = box("Candle wick", [0.052, 0.14, 0.052], [position.x, top + pedestal + 0.6, position.z], wick);
@@ -160,8 +166,8 @@ export function createAnnex(scene: Scene, workshop: Workshop, solids: Solid[]) {
     mazeMeshes.add(inner);
     const point = new PointLight("Candle pool of light", new Vector3(position.x, top + pedestal + 0.92, position.z), scene);
     point.diffuse = Color3.FromHexString("#FFAD59");
-    point.range = candleRange;
-    return { position, fire, point, index, key, lit: false };
+    point.range = entrance ? entranceRange : candleRange;
+    return { position, fire, point, index, entrance, lit: entrance, surfaces: [] as AbstractMesh[], reachesScout: false };
   });
 
   for (const side of [-1, 1]) {
@@ -178,62 +184,67 @@ export function createAnnex(scene: Scene, workshop: Workshop, solids: Solid[]) {
     inlay.position.z -= 1.9;
     inlay.material = metal;
   }
-  function isDark(position: Vector3) {
+  function contains(position: Vector3) {
     return position.z >= front && position.z < back && Math.abs(position.x - x) < halfWidth
       && Math.abs(position.y - top) < 2.7;
   }
 
   return {
-    isDark, mazeMeshes, totalCandles,
-    get litCount() { return keyCandlesLit; },
+    contains, mazeMeshes,
     setArenaEntrance, setArenaExit,
     lightScout(meshes: AbstractMesh[]) {
+      scoutMeshes = meshes;
       const worldSurfaces = surfaces.map(({ mesh, wall }) => {
         mesh.computeWorldMatrix(true);
         return { mesh, wall, center: mesh.getAbsolutePosition().clone() };
       });
-      for (const { position, point } of candles) {
-        const nearby = worldSurfaces.filter(({ center, wall }) => receivesCandleLight(position, center, wall));
-        point.includedOnlyMeshes = nearby.map(({ mesh }) => mesh).concat(meshes);
+      for (const candle of candles) {
+        const { position, point } = candle;
+        candle.surfaces = worldSurfaces
+          .filter(({ center, wall }) => receivesCandleLight(position, center, wall, point.range))
+          .map(({ mesh }) => mesh);
+        point.includedOnlyMeshes = [...candle.surfaces];
       }
     },
-    isIlluminated(position: Vector3) {
-      return candles.some((candle) => candle.lit
-        && Math.hypot(candle.position.x - position.x, candle.position.z - position.z) < candleRange
-        && pathClear(position, candle.position));
-    },
     strike(from: Vector3, inReach: (target: Vector3, range: number) => boolean) {
-      if (!isDark(from)) return false;
+      if (!contains(from)) return false;
       let changed = false;
       for (const candle of candles) {
         const { position } = candle;
         if (candle.lit || !inReach(position, 2.12) || !pathClear(from, position)) continue;
         candle.lit = true;
-        if (candle.key) keyCandlesLit++;
         changed = true;
       }
-      if (changed && keyCandlesLit === totalCandles) setMazeExit(true);
       return changed;
     },
-    draw(clock: number, dark: boolean) {
-      for (const { lit, fire, point, index } of candles) {
+    draw(clock: number, scout: Vector3, nearby: boolean) {
+      let scoutLit = false;
+      for (const candle of candles) {
+        const { lit, fire, point, index, entrance, position } = candle;
         fire.setEnabled(lit);
-        if (point.isEnabled() !== (lit && dark)) point.setEnabled(lit && dark);
-        if (!lit || !dark) continue;
+        const reachesScout = lit && nearby
+          && Math.hypot(position.x - scout.x, position.z - scout.z) < point.range
+          && pathClear(position, scout);
+        if (candle.reachesScout !== reachesScout) {
+          candle.reachesScout = reachesScout;
+          point.includedOnlyMeshes = reachesScout ? [...candle.surfaces, ...scoutMeshes] : [...candle.surfaces];
+        }
+        scoutLit ||= reachesScout;
+        if (point.isEnabled() !== (lit && nearby)) point.setEnabled(lit && nearby);
+        if (!lit || !nearby) continue;
         const flicker = Math.sin(clock * 16 + index * 2.6) + 0.44 * Math.sin(clock * 23 + index);
         fire.scaling.y = 1 + flicker * 0.075;
         fire.rotation.z = flicker * 0.12;
-        point.intensity = 3.05 + flicker * 0.24;
+        point.intensity = (entrance ? 4.9 : 3.5) + flicker * 0.24;
       }
+      return scoutLit;
     },
-    reset(cleared: boolean) {
-      keyCandlesLit = cleared ? totalCandles : 0;
+    reset() {
       for (const candle of candles) {
-        candle.lit = cleared;
-        candle.fire.setEnabled(cleared);
+        candle.lit = candle.entrance;
+        candle.fire.setEnabled(candle.entrance);
         candle.point.setEnabled(false);
       }
-      setMazeExit(cleared);
       setArenaEntrance(true);
       setArenaExit(false);
     },

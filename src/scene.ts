@@ -117,6 +117,7 @@ export function createPlatformerScene(engine: Engine, input: GameInput) {
   let feedback = "";
   let feedbackTime = 0;
   let mazeView = 0;
+  let mazeDarkness = 0;
 
   const hud = createHud({
     unlockDoor() { doorUnlocked = true; },
@@ -136,6 +137,7 @@ export function createPlatformerScene(engine: Engine, input: GameInput) {
     cameraFocus.copyFrom(checkpoint);
     cameraHeight = 6.95;
     mazeView = 0;
+    mazeDarkness = 0;
     health = 3;
     invulnerable = 0;
     facing = 0;
@@ -178,7 +180,7 @@ export function createPlatformerScene(engine: Engine, input: GameInput) {
     openingChest = false;
     chestProgress = 0;
     feedbackTime = 0;
-    annex.reset(point.z >= bossArena.checkpoint.z);
+    annex.reset();
     guardian.reset();
     for (const fight of fights) {
       fight.cleared = point.z > fight.zone.back;
@@ -304,11 +306,7 @@ export function createPlatformerScene(engine: Engine, input: GameInput) {
 
   function attack() {
     swing = attackSeconds;
-    const before = annex.litCount;
-    if (annex.strike(position, strikeInRange)) {
-      const exitOpen = before < annex.totalCandles && annex.litCount === annex.totalCandles;
-      notify(exitOpen ? "Все свечи горят. Решётка открылась" : "Свеча зажжена");
-    }
+    if (annex.strike(position, strikeInRange)) notify("Свеча зажжена");
     if (guardian.strike(strikeInRange) && guardian.defeated) {
       annex.setArenaExit(true);
       annex.setArenaEntrance(true);
@@ -407,8 +405,7 @@ export function createPlatformerScene(engine: Engine, input: GameInput) {
       checkpoint = maze.checkpoint;
       notify("За дверью — Свечной зал");
     }
-    if (checkpoint === maze.checkpoint && annex.litCount === annex.totalCandles && position.y === bossArena.top
-      && position.z >= maze.back + 1.25) {
+    if (checkpoint === maze.checkpoint && position.y === bossArena.top && position.z >= maze.back + 1.25) {
       checkpoint = bossArena.checkpoint;
       health = 3;
       notify("Хранитель ждёт впереди");
@@ -503,11 +500,7 @@ export function createPlatformerScene(engine: Engine, input: GameInput) {
     if (guardian.defeated) return "Хранитель повержен · Откройте сундук";
     if (guardian.active) return guardian.hint;
     if (checkpoint === bossArena.checkpoint) return "Пройдите к арене Хранителя";
-    if (checkpoint === maze.checkpoint) {
-      if (annex.litCount === annex.totalCandles) return "Свечной зал · Найдите открытую решётку";
-      if (annex.litCount === 0) return "Свечной зал · Первая свеча прямо у входа. Ударьте мечом";
-      return `Зажигайте свечи мечом · Большие свечи ${annex.litCount} / ${annex.totalCandles}`;
-    }
+    if (checkpoint === maze.checkpoint) return "Найдите выход · Зажигайте свечи мечом";
     if (doorUnlocked) return "Пройдите в Свечной зал";
     if (ride) return ride.kind === "lift" ? "Лифт поднимается" : "Переправа по тросу";
     if (cables[1].used) {
@@ -527,8 +520,14 @@ export function createPlatformerScene(engine: Engine, input: GameInput) {
   }
 
   function draw(dt: number) {
-    const inMaze = annex.isDark(position);
-    avatar.setEnabled(!inMaze || annex.isIlluminated(position));
+    const inMaze = annex.contains(position);
+    mazeDarkness = Math.max(0, Math.min(1, mazeDarkness + (inMaze ? dt : -dt) / 0.95));
+    const darkness = mazeDarkness * mazeDarkness * (3 - 2 * mazeDarkness);
+    const fullyDark = mazeDarkness === 1;
+    const nearMaze = position.z >= maze.front - 7 && position.z < maze.back + 5
+      && Math.abs(position.y - maze.top) < 2.7;
+    const scoutLit = annex.draw(clock, position, nearMaze);
+    avatar.setEnabled(!fullyDark || scoutLit);
     avatar.position.copyFrom(position);
     avatar.rotation.y = facing;
     drawScout(clock, moving && !ride && !finished, player.grounded,
@@ -545,12 +544,13 @@ export function createPlatformerScene(engine: Engine, input: GameInput) {
 
     const follow = 1 - Math.exp(-dt * 8);
     mazeView += ((inMaze ? 1 : 0) - mazeView) * follow;
-    camera.layerMask = inMaze ? mazeMask : roomMask;
-    scene.clearColor.copyFrom(inMaze ? darkBackground : roomBackground);
-    scene.fogMode = inMaze ? Scene.FOGMODE_NONE : Scene.FOGMODE_LINEAR;
-    ambientLight.intensity = inMaze ? 0 : 0.78;
-    sun.intensity = inMaze ? 0 : 0.95;
-    annex.draw(clock, inMaze);
+    camera.layerMask = fullyDark ? mazeMask : roomMask;
+    Color4.LerpToRef(roomBackground, darkBackground, darkness, scene.clearColor);
+    scene.fogMode = fullyDark ? Scene.FOGMODE_NONE : Scene.FOGMODE_LINEAR;
+    scene.fogStart = 20 + 90 * darkness;
+    scene.fogEnd = 80 + 90 * darkness;
+    ambientLight.intensity = 0.78 * (1 - darkness);
+    sun.intensity = 0.95 * (1 - darkness);
     Vector3.LerpToRef(cameraFocus, position, follow, cameraFocus);
     const narrow = engine.getRenderWidth() / engine.getRenderHeight() < 0.95;
     camera.fovMode = narrow ? FreeCamera.FOVMODE_HORIZONTAL_FIXED : FreeCamera.FOVMODE_VERTICAL_FIXED;
