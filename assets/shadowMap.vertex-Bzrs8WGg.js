@@ -1,4 +1,4 @@
-import{t as e}from"./shaderStore-D-XQlhUT.js";import"./index-Cc_5WgrG.js";import"./helperFunctions-BBzu79E7.js";import"./meshUboDeclaration-CCxcUd5w.js";var t=`sceneVertexDeclaration`,n=`uniform mat4 viewProjection;
+import{t as e}from"./shaderStore-D-XQlhUT.js";import"./index-DEFvSTRQ.js";import"./helperFunctions-BBzu79E7.js";import"./meshUboDeclaration-CCxcUd5w.js";var t=`sceneVertexDeclaration`,n=`uniform mat4 viewProjection;
 #ifdef MULTIVIEW
 uniform mat4 viewProjectionR;
 #endif

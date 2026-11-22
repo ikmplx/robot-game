@@ -1,4 +1,4 @@
-import{t as e}from"./shaderStore-D-XQlhUT.js";import"./index-Cc_5WgrG.js";import"./vertexColorMixing-Ol-rzny7.js";var t=`colorVertexShader`,n=`attribute vec3 position;
+import{t as e}from"./shaderStore-D-XQlhUT.js";import"./index-DEFvSTRQ.js";import"./vertexColorMixing-Ol-rzny7.js";var t=`colorVertexShader`,n=`attribute vec3 position;
 #ifdef VERTEXCOLOR
 attribute vec4 color;
 #endif
