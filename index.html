@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#10101d" />
     <link rel="manifest" href="./game.webmanifest" />
     <title>Рубеж</title>
-    <script type="module" crossorigin src="./assets/index-Bd7M4ihG.js"></script>
+    <script type="module" crossorigin src="./assets/index-QklQgJ_h.js"></script>
     <link rel="modulepreload" crossorigin href="./assets/rolldown-runtime-DK3Fl9T5.js">
     <link rel="modulepreload" crossorigin href="./assets/decorators-BOtej2xA.js">
     <link rel="modulepreload" crossorigin href="./assets/observable-BmPG9gPP.js">
@@ -36,15 +36,15 @@
     <link rel="modulepreload" crossorigin href="./assets/thinEngine-CxBbUxVJ.js">
     <link rel="modulepreload" crossorigin href="./assets/math.axis-BFQs_hWo.js">
     <link rel="modulepreload" crossorigin href="./assets/math.path-CkUQMaUZ.js">
-    <link rel="modulepreload" crossorigin href="./assets/textureTools-FfShxP2m.js">
+    <link rel="modulepreload" crossorigin href="./assets/textureTools-z0dOTNMo.js">
     <link rel="modulepreload" crossorigin href="./assets/dumpTools-Df7PS3nD.js">
-    <link rel="modulepreload" crossorigin href="./assets/cubemapToSphericalPolynomial-xQFk9Wyi.js">
+    <link rel="modulepreload" crossorigin href="./assets/cubemapToSphericalPolynomial-DZ0nAxcj.js">
     <link rel="modulepreload" crossorigin href="./assets/webAudioBaseSubGraph-BIrBBO2D.js">
     <link rel="modulepreload" crossorigin href="./assets/abstractSoundSource-9hicha-7.js">
     <link rel="modulepreload" crossorigin href="./assets/flowGraphBlock-Cu-qxVpF.js">
     <link rel="modulepreload" crossorigin href="./assets/flowGraphExecutionBlock-DPcSTdHo.js">
     <link rel="modulepreload" crossorigin href="./assets/flowGraphExecutionBlockWithOutSignal-Dwf3sCiX.js">
-    <link rel="stylesheet" crossorigin href="./assets/index-D1fWC_CX.css">
+    <link rel="stylesheet" crossorigin href="./assets/index-BMcAqEwD.css">
   </head>
   <body>
     <main class="viewport">
@@ -68,6 +68,7 @@
           <div class="overlay-actions">
             <button id="lessons" class="primary" type="button">Уроки</button>
             <button id="checkpoints" type="button" aria-haspopup="dialog" aria-controls="checkpoint-menu">Чекпоинты</button>
+            <button id="travel-journal-button" type="button" aria-label="Дневник путешествий" aria-haspopup="dialog" aria-controls="travel-journal">Дневник</button>
             <button id="restart" class="icon-button" type="button" aria-label="Заново" title="Заново (R)">↻</button>
             <button id="fullscreen" class="icon-button" type="button" aria-label="На весь экран" hidden>⛶</button>
             <p id="fullscreen-status" role="status"></p>
@@ -116,6 +117,33 @@
         </div>
         <p id="checkpoint-copy">Выбранный участок начнётся заново. Монеты и звёзды сохранятся.</p>
         <div id="checkpoint-list"></div>
+      </dialog>
+
+      <dialog id="librarian-dialog" class="travel-dialog" aria-labelledby="librarian-title" aria-describedby="librarian-fact librarian-reward">
+        <div class="activity-heading">
+          <h2 id="librarian-title">Библиотекарь</h2>
+          <button id="close-librarian" class="icon-button" type="button" aria-label="Закрыть диалог">×</button>
+        </div>
+        <p id="librarian-fact" class="travel-copy"></p>
+        <p id="librarian-reward" class="travel-reward"></p>
+        <button id="view-travel-card" class="primary" type="button">Открыть дневник</button>
+      </dialog>
+
+      <dialog id="travel-journal" class="travel-dialog" aria-labelledby="travel-journal-title">
+        <div class="activity-heading">
+          <h2 id="travel-journal-title">Дневник путешествий</h2>
+          <button id="close-travel-journal" class="icon-button" type="button" aria-label="Закрыть дневник">×</button>
+        </div>
+        <p id="travel-journal-empty" class="travel-copy">Карточек пока нет.</p>
+        <article id="himeji-card" class="travel-card" hidden>
+          <img id="himeji-photo" width="960" height="720" alt="Белые стены и многоярусные крыши замка Химэдзи">
+          <div class="travel-card-body">
+            <p class="travel-card-place">Япония · Хёго</p>
+            <h3>Замок Белой цапли</h3>
+            <p id="himeji-fact"></p>
+            <a href="https://www.japan.travel/en/world-heritage/himeji-jo-castle/" target="_blank" rel="noopener noreferrer">О замке Химэдзи</a>
+          </div>
+        </article>
       </dialog>
 
       <dialog id="cat-lock" class="puzzle-dialog" aria-labelledby="puzzle-title" aria-describedby="puzzle-instructions">
