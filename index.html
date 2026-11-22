@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#10101d" />
     <link rel="manifest" href="./game.webmanifest" />
     <title>Рубеж</title>
-    <script type="module" crossorigin src="./assets/index-D_7gVUzy.js"></script>
+    <script type="module" crossorigin src="./assets/index-fPsloNRN.js"></script>
     <link rel="modulepreload" crossorigin href="./assets/rolldown-runtime-DK3Fl9T5.js">
     <link rel="modulepreload" crossorigin href="./assets/performanceConfigurator-fYuIgwDq.js">
     <link rel="modulepreload" crossorigin href="./assets/logger-CuBYPcDK.js">
@@ -19,7 +19,7 @@
     <link rel="modulepreload" crossorigin href="./assets/math.vector-Bb0FLRpA.js">
     <link rel="modulepreload" crossorigin href="./assets/postprocess.vertex-CqEQ0GqR.js">
     <link rel="modulepreload" crossorigin href="./assets/postprocess.vertex-3K0axN5Y.js">
-    <link rel="stylesheet" crossorigin href="./assets/index-uZE210th.css">
+    <link rel="stylesheet" crossorigin href="./assets/index-BJZYZ0Nh.css">
   </head>
   <body>
     <main class="viewport">
@@ -42,6 +42,7 @@
           </div>
           <div class="overlay-actions">
             <button id="lessons" class="primary" type="button">Уроки</button>
+            <button id="checkpoints" type="button" aria-haspopup="dialog" aria-controls="checkpoint-menu">Чекпоинты</button>
             <button id="restart" class="icon-button" type="button" aria-label="Заново" title="Заново (R)">↻</button>
             <button id="fullscreen" class="icon-button" type="button" aria-label="На весь экран" hidden>⛶</button>
             <p id="fullscreen-status" role="status"></p>
@@ -81,6 +82,15 @@
         </div>
         <p id="activity-copy">Зачтите три урока, чтобы получить три звезды. Каждый урок пока заменён кнопкой.</p>
         <div id="lesson-list"></div>
+      </dialog>
+
+      <dialog id="checkpoint-menu" aria-labelledby="checkpoint-title" aria-describedby="checkpoint-copy">
+        <div class="activity-heading">
+          <h2 id="checkpoint-title">Выбор чекпоинта</h2>
+          <button id="close-checkpoints" class="icon-button" type="button" aria-label="Закрыть">×</button>
+        </div>
+        <p id="checkpoint-copy">Выбранный участок начнётся заново. Монеты и звёзды сохранятся.</p>
+        <div id="checkpoint-list"></div>
       </dialog>
 
       <dialog id="cat-lock" class="puzzle-dialog" aria-labelledby="puzzle-title" aria-describedby="puzzle-instructions">

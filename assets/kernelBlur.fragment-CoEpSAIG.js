@@ -1,4 +1,4 @@
-import{t as e}from"./shaderStore-D-XQlhUT.js";import"./kernelBlurVaryingDeclaration-DSCV0eGX.js";import"./index-D_7gVUzy.js";var t=`kernelBlurFragment`,n=`#ifdef DOF
+import{t as e}from"./shaderStore-D-XQlhUT.js";import"./kernelBlurVaryingDeclaration-DSCV0eGX.js";import"./index-fPsloNRN.js";var t=`kernelBlurFragment`,n=`#ifdef DOF
 factor=sampleCoC(sampleCoord{X}); 
 computedWeight=KERNEL_WEIGHT{X}*factor;sumOfWeights+=computedWeight;
 #else
