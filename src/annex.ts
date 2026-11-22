@@ -226,14 +226,14 @@ export function createAnnex(scene: Scene, workshop: Workshop, solids: Solid[]) {
         point.intensity = 3.05 + flicker * 0.24;
       }
     },
-    reset() {
-      keyCandlesLit = 0;
+    reset(cleared: boolean) {
+      keyCandlesLit = cleared ? totalCandles : 0;
       for (const candle of candles) {
-        candle.lit = false;
-        candle.fire.setEnabled(false);
+        candle.lit = cleared;
+        candle.fire.setEnabled(cleared);
         candle.point.setEnabled(false);
       }
-      setMazeExit(false);
+      setMazeExit(cleared);
       setArenaEntrance(true);
       setArenaExit(false);
     },

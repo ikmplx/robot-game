@@ -14,7 +14,7 @@ import { createHud } from "./hud";
 import type { GameInput } from "./input";
 import { createLevel, createWorkshop } from "./level";
 import { createPlayer, type Solid } from "./platformer";
-import { arenas, bossArena, crateCourses, gate, hazard, lifts, maze, spawn, treasure, ziplines, type Arena } from "./route";
+import { arenas, bossArena, checkpointChoices, crateCourses, gate, hazard, lifts, maze, spawn, treasure, ziplines, type Arena } from "./route";
 import { createTreasureChest } from "./treasure";
 
 const step = 1 / 120;
@@ -112,6 +112,7 @@ export function createPlatformerScene(engine: Engine, input: GameInput) {
   let doorProgress = 0;
   let openingChest = false;
   let chestProgress = 0;
+  let treasureClaimed = false;
   let finished = false;
   let feedback = "";
   let feedbackTime = 0;
@@ -120,8 +121,9 @@ export function createPlatformerScene(engine: Engine, input: GameInput) {
   const hud = createHud({
     unlockDoor() { doorUnlocked = true; },
     restart: reset,
+    selectCheckpoint,
     clearInput: input.reset,
-  });
+  }, checkpointChoices);
   scene.onDisposeObservable.add(hud.dispose);
 
   function notify(message: string) {
@@ -144,7 +146,7 @@ export function createPlatformerScene(engine: Engine, input: GameInput) {
       if (fight.cleared) continue;
       for (const enemy of fight.enemies) enemy.reset();
     }
-    if (!guardian.defeated) {
+    if (checkpoint === bossArena.checkpoint && !guardian.defeated) {
       guardian.reset();
       annex.setArenaEntrance(true);
     }
@@ -161,38 +163,54 @@ export function createPlatformerScene(engine: Engine, input: GameInput) {
     return true;
   }
 
-  function resetCrates(board: typeof floorCargo) {
-    for (const crate of board.crates) crate.reset();
-    board.placed = 0;
-    board.setBarrier(true);
+  function setCargo(board: typeof floorCargo, placed: boolean) {
+    for (const crate of board.crates) crate.setPlaced(placed);
+    board.placed = placed ? board.crates.length : 0;
+    board.setBarrier(!placed);
   }
 
-  function reset() {
-    checkpoint = spawn;
-    collected = 0;
+  function startAt(point: Vector3) {
+    checkpoint = point;
+    accumulator = 0;
     finished = false;
-    doorUnlocked = false;
-    doorProgress = 0;
+    doorUnlocked = point.z > gate.z;
+    doorProgress = doorUnlocked ? 1 : 0;
     openingChest = false;
     chestProgress = 0;
     feedbackTime = 0;
-    annex.reset();
+    annex.reset(point.z >= bossArena.checkpoint.z);
     guardian.reset();
     for (const fight of fights) {
-      fight.cleared = false;
-      fight.setBarrier(true);
+      fight.cleared = point.z > fight.zone.back;
+      fight.setBarrier(!fight.cleared);
+      if (fight.cleared) for (const enemy of fight.enemies) enemy.health = 0;
     }
-    for (const board of cargo) resetCrates(board);
-    for (const { track, platform } of elevators) platform.move(track.lower);
-    for (const elevator of elevators) elevator.used = false;
+    for (const board of cargo) setCargo(board, point.z > board.course.back);
+    for (const elevator of elevators) {
+      elevator.used = point.z >= elevator.track.arrival.z;
+      elevator.platform.move(elevator.used ? elevator.track.upper : elevator.track.lower);
+    }
     for (const cable of cables) {
-      cable.grip.position.copyFrom(cable.start);
-      cable.used = false;
+      cable.used = point.z >= cable.end.z;
+      cable.grip.position.copyFrom(cable.used ? cable.end : cable.start);
     }
-    for (const { coin } of level.coins) coin.setEnabled(true);
-    level.setDoor(0, 0);
-    hud.reset();
+    level.setDoor(doorProgress, doorUnlocked ? 3 : hud.countStars());
     respawn();
+  }
+
+  function reset() {
+    collected = 0;
+    treasureClaimed = false;
+    for (const { coin } of level.coins) coin.setEnabled(true);
+    hud.reset();
+    startAt(spawn);
+  }
+
+  function selectCheckpoint(index: number) {
+    const { label, position: point } = checkpointChoices[index];
+    hud.resetMosaic();
+    startAt(point);
+    notify(label);
   }
 
   function interaction(): Interaction | null {
@@ -258,7 +276,7 @@ export function createPlatformerScene(engine: Engine, input: GameInput) {
       case "resetCrates": {
         const board = cargo[action.index];
         player.reset(board.course.restart);
-        resetCrates(board);
+        setCargo(board, false);
         notify("Ящики возвращены на исходные места");
         break;
       }
@@ -442,7 +460,8 @@ export function createPlatformerScene(engine: Engine, input: GameInput) {
     if (openingChest) {
       chestProgress += dt;
       if (chestProgress >= 1.18) {
-        collected += chest.amount;
+        if (!treasureClaimed) collected += chest.amount;
+        treasureClaimed = true;
         finished = true;
       }
       return;
@@ -469,8 +488,8 @@ export function createPlatformerScene(engine: Engine, input: GameInput) {
       updateCargo();
       updateGuardian(dt);
     }
-    for (const { coin, position: center } of level.coins) {
-      if (coin.isEnabled() && horizontalDistance(position, center) < 0.8
+    for (const { coin, position: center, minimumY } of level.coins) {
+      if (coin.isEnabled() && position.y >= minimumY && horizontalDistance(position, center) < 0.8
         && Math.abs(position.y + 0.7 - center.y) < 1.12) {
         coin.setEnabled(false);
         collected += 1;
@@ -480,7 +499,7 @@ export function createPlatformerScene(engine: Engine, input: GameInput) {
 
   function objective() {
     if (finished) return "Сокровище получено";
-    if (openingChest) return `Награда · +${chest.amount} монет`;
+    if (openingChest) return treasureClaimed ? "Сундук открыт" : `Награда · +${chest.amount} монет`;
     if (guardian.defeated) return "Хранитель повержен · Откройте сундук";
     if (guardian.active) return guardian.hint;
     if (checkpoint === bossArena.checkpoint) return "Пройдите к арене Хранителя";
@@ -522,7 +541,7 @@ export function createPlatformerScene(engine: Engine, input: GameInput) {
       coin.rotation.y = clock * 2.25 + index * 0.4;
       coin.position.y = center.y + Math.sin(clock * 3.2 + index * 0.65) * 0.105;
     }
-    level.setDoor(doorProgress * doorProgress * (3 - 2 * doorProgress), hud.countStars());
+    level.setDoor(doorProgress * doorProgress * (3 - 2 * doorProgress), doorUnlocked ? 3 : hud.countStars());
 
     const follow = 1 - Math.exp(-dt * 8);
     mazeView += ((inMaze ? 1 : 0) - mazeView) * follow;
@@ -547,6 +566,7 @@ export function createPlatformerScene(engine: Engine, input: GameInput) {
     hud.update({
       health, coins: collected, totalCoins: level.coins.length + chest.amount, objective: objective(),
       bossHealth: guardian.active ? guardian.health : null, bossMaxHealth: guardian.maxHealth,
+      checkpointIndex: checkpointChoices.findIndex(({ position }) => position === checkpoint),
       interaction: available ? prompts[available.kind] : "", feedback: feedbackTime > 0 && !finished ? feedback : "", finished,
     });
   }

@@ -265,7 +265,7 @@ export function createLevel(scene: Scene, workshop: Workshop, solids: Solid[]) {
       }
     }
 
-    const crates = course.crates.map(({ home, target }, index) => {
+    const crates = course.crates.map(({ home, target, via = [] }, index) => {
       const [homeX, homeZ] = [x + home[0], z + home[1]];
       const [padX, padZ] = [x + target[0], z + target[1]];
       const color = crateColors[index];
@@ -285,9 +285,19 @@ export function createLevel(scene: Scene, workshop: Workshop, solids: Solid[]) {
         max: new Vector3(padX + halfCrate, top + crateSize, padZ + halfCrate),
       };
       const pad = box("Crate target", [1.94, 0.035, 1.94], [padX, top + 0.024, padZ], inset);
-      if (homeX === padX) {
-        for (let z = homeZ + 1.15; z < padZ - 1.1; z += 0.58) {
-          box("Cargo guide", [0.08, 0.02, 0.28], [padX, top + 0.015, z], color);
+      const guide = [home, ...via, target];
+      for (let segment = 1; segment < guide.length; segment++) {
+        const [fromX, fromZ] = guide[segment - 1];
+        const [toX, toZ] = guide[segment];
+        const dx = toX - fromX;
+        const dz = toZ - fromZ;
+        const length = Math.hypot(dx, dz);
+        const start = segment === 1 ? 1.15 : 0.18;
+        const end = length - (segment === guide.length - 1 ? 1.1 : 0.18);
+        for (let distance = start; distance < end; distance += 0.58) {
+          const dash = box("Cargo guide", [0.08, 0.02, 0.28],
+            [x + fromX + dx * distance / length, top + 0.015, z + fromZ + dz * distance / length], color);
+          dash.rotation.y = Math.atan2(dx, dz);
         }
       }
       const markings = [-1, 1].flatMap((edge) => [
@@ -309,10 +319,14 @@ export function createLevel(scene: Scene, workshop: Workshop, solids: Solid[]) {
       function checkTarget(playerOverlaps: (solid: Solid) => boolean) {
         if (placed || Math.hypot(root.position.x - padX, root.position.z - padZ) > 0.34) return;
         if (playerOverlaps(destination) || solids.some((solid) => solid !== body && solidsOverlap(destination, solid))) return;
-        placed = true;
-        moveTo(padX, padZ);
-        pad.material = color;
-        for (const marking of markings) marking.material = silver;
+        setPlaced(true);
+      }
+      function setPlaced(onTarget: boolean) {
+        placed = onTarget;
+        if (onTarget) moveTo(padX, padZ);
+        else moveTo(homeX, homeZ);
+        pad.material = onTarget ? color : inset;
+        for (const marking of markings) marking.material = onTarget ? silver : color;
       }
       body.push = (axis, distance) => {
         if (placed) return 0;
@@ -325,12 +339,7 @@ export function createLevel(scene: Scene, workshop: Workshop, solids: Solid[]) {
         get placed() { return placed; },
         get moved() { return root.position.x !== homeX || root.position.z !== homeZ; },
         checkTarget,
-        reset() {
-          placed = false;
-          moveTo(homeX, homeZ);
-          pad.material = inset;
-          for (const marking of markings) marking.material = color;
-        },
+        setPlaced,
       };
     });
     return { crates, setBarrier };
@@ -442,20 +451,26 @@ export function createLevel(scene: Scene, workshop: Workshop, solids: Solid[]) {
     light.rotation.z = Math.PI / 4;
     return light;
   });
-  const coins = coinSpots.map(([x, y, z]) => {
-    const position = new Vector3(x, y + 0.73, z);
+  function createCoin(x: number, y: number, z: number, onJumpCube: boolean) {
+    const position = new Vector3(x, y + (onJumpCube ? 0.88 : 0.73), z);
     const coin = new TransformNode("Coin", scene);
     coin.position.copyFrom(position);
-    const disc = CreateCylinder("Gold rim", { height: 0.115, diameter: 0.47, tessellation: 18 }, scene);
+    const diameter = onJumpCube ? 0.58 : 0.47;
+    const disc = CreateCylinder("Gold rim", { height: 0.115, diameter, tessellation: 18 }, scene);
     disc.parent = coin;
     disc.rotation.x = Math.PI / 2;
     disc.material = gold;
-    const face = CreateCylinder("Gold face", { height: 0.127, diameter: 0.34, tessellation: 18 }, scene);
+    const face = CreateCylinder("Gold face", { height: 0.127, diameter: diameter * 0.73, tessellation: 18 }, scene);
     face.parent = coin;
     face.rotation.x = Math.PI / 2;
     face.material = goldFace;
-    return { coin, position };
-  });
+    return { coin, position, minimumY: onJumpCube ? y - 0.1 : -Infinity };
+  }
+
+  const coins = [
+    ...coinSpots.map(([x, y, z]) => createCoin(x, y, z, false)),
+    ...jumpBlocks.map(([x, top, z]) => createCoin(x, top, z, true)),
+  ];
 
   return {
     coins, cargo, fightBarriers, elevatorPlatforms, zipGrips,

@@ -7,12 +7,18 @@ type View = {
   objective: string;
   bossHealth: number | null;
   bossMaxHealth: number;
+  checkpointIndex: number;
   interaction: string;
   feedback: string;
   finished: boolean;
 };
 
-export function createHud(actions: { unlockDoor: () => void; restart: () => void; clearInput: () => void }) {
+export function createHud(actions: {
+  unlockDoor: () => void;
+  restart: () => void;
+  selectCheckpoint: (index: number) => void;
+  clearInput: () => void;
+}, checkpoints: readonly { label: string }[]) {
   const events = new AbortController();
   const options = { signal: events.signal };
   const health = document.querySelector<HTMLElement>("#health")!;
@@ -29,6 +35,9 @@ export function createHud(actions: { unlockDoor: () => void; restart: () => void
   const dialog = document.querySelector<HTMLDialogElement>("#activity")!;
   const close = document.querySelector<HTMLButtonElement>("#close-activity")!;
   const lessonList = document.querySelector<HTMLElement>("#lesson-list")!;
+  const checkpointDialog = document.querySelector<HTMLDialogElement>("#checkpoint-menu")!;
+  const checkpointList = document.querySelector<HTMLElement>("#checkpoint-list")!;
+  const closeCheckpoints = document.querySelector<HTMLButtonElement>("#close-checkpoints")!;
   const canvas = document.querySelector<HTMLCanvasElement>("#scene")!;
 
   function resumeGame() {
@@ -41,6 +50,11 @@ export function createHud(actions: { unlockDoor: () => void; restart: () => void
     resumeGame,
     solve: actions.unlockDoor,
   }, options);
+  let checkpointIndex = 0;
+
+  function modalOpen() {
+    return dialog.open || puzzle.open || checkpointDialog.open;
+  }
 
   function countStars() {
     return lessonButtons.filter((button) => button.disabled).length;
@@ -74,11 +88,37 @@ export function createHud(actions: { unlockDoor: () => void; restart: () => void
   });
 
   function showLessons() {
-    if (dialog.open || puzzle.open) return;
+    if (modalOpen()) return;
     actions.clearInput();
     dialog.showModal();
     close.focus();
   }
+
+  const checkpointButtons = checkpoints.map(({ label }, index) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = label;
+    button.addEventListener("click", () => {
+      if (!checkpointDialog.open) return;
+      checkpointDialog.close();
+      actions.selectCheckpoint(index);
+    }, options);
+    checkpointList.append(button);
+    return button;
+  });
+
+  document.querySelector("#checkpoints")!.addEventListener("click", () => {
+    if (modalOpen()) return;
+    for (const [index, button] of checkpointButtons.entries()) {
+      if (index === checkpointIndex) button.setAttribute("aria-current", "location");
+      else button.removeAttribute("aria-current");
+    }
+    actions.clearInput();
+    checkpointDialog.showModal();
+    closeCheckpoints.focus();
+  }, options);
+  closeCheckpoints.addEventListener("click", () => checkpointDialog.close(), options);
+  checkpointDialog.addEventListener("close", resumeGame, options);
 
   document.querySelector("#lessons")!.addEventListener("click", showLessons, options);
   document.querySelector("#play-again")!.addEventListener("click", () => {
@@ -93,12 +133,13 @@ export function createHud(actions: { unlockDoor: () => void; restart: () => void
   }
 
   return {
-    get paused() { return dialog.open || puzzle.open; },
+    get paused() { return modalOpen(); },
     countStars,
     showLessons,
     showMinigame() {
-      if (!dialog.open && countStars() === 3) puzzle.show();
+      if (!modalOpen() && countStars() === 3) puzzle.show();
     },
+    resetMosaic: puzzle.reset,
     reset() {
       puzzle.reset();
       for (const [index, button] of lessonButtons.entries()) {
@@ -109,6 +150,7 @@ export function createHud(actions: { unlockDoor: () => void; restart: () => void
       renderStars();
     },
     update(view: View) {
+      checkpointIndex = view.checkpointIndex;
       const hearts = "♥".repeat(view.health) + "♡".repeat(3 - view.health);
       if (health.textContent !== hearts) {
         health.textContent = hearts;
@@ -133,7 +175,9 @@ export function createHud(actions: { unlockDoor: () => void; restart: () => void
     },
     dispose() {
       if (dialog.open) dialog.close();
+      if (checkpointDialog.open) checkpointDialog.close();
       lessonList.replaceChildren();
+      checkpointList.replaceChildren();
       puzzle.dispose();
       events.abort();
     },

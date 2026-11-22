@@ -28,6 +28,7 @@
           </div>
           <div class="overlay-actions">
             <button id="lessons" class="primary" type="button">Уроки</button>
+            <button id="checkpoints" type="button" aria-haspopup="dialog" aria-controls="checkpoint-menu">Чекпоинты</button>
             <button id="restart" class="icon-button" type="button" aria-label="Заново" title="Заново (R)">↻</button>
             <button id="fullscreen" class="icon-button" type="button" aria-label="На весь экран" hidden>⛶</button>
             <p id="fullscreen-status" role="status"></p>
@@ -67,6 +68,15 @@
         </div>
         <p id="activity-copy">Зачтите три урока, чтобы получить три звезды. Каждый урок пока заменён кнопкой.</p>
         <div id="lesson-list"></div>
+      </dialog>
+
+      <dialog id="checkpoint-menu" aria-labelledby="checkpoint-title" aria-describedby="checkpoint-copy">
+        <div class="activity-heading">
+          <h2 id="checkpoint-title">Выбор чекпоинта</h2>
+          <button id="close-checkpoints" class="icon-button" type="button" aria-label="Закрыть">×</button>
+        </div>
+        <p id="checkpoint-copy">Выбранный участок начнётся заново. Монеты и звёзды сохранятся.</p>
+        <div id="checkpoint-list"></div>
       </dialog>
 
       <dialog id="cat-lock" class="puzzle-dialog" aria-labelledby="puzzle-title" aria-describedby="puzzle-instructions">

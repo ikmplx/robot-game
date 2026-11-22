@@ -23,7 +23,7 @@ export type CrateCourse = {
   back: number;
   restart: Vector3;
   obstacles: readonly { x: number; z: number; width: number; depth: number }[];
-  crates: readonly { home: Point; target: Point }[];
+  crates: readonly { home: Point; target: Point; via?: readonly Point[] }[];
   exitMessage: string;
 };
 
@@ -72,10 +72,10 @@ export const crateCourses: CrateCourse[] = [
       { x: 7.4, z: -0.7, width: 7.2, depth: 1 },
     ],
     crates: [
-      { home: [-5.8, -4.65], target: [-6.6, 4.6] },
-      { home: [5.8, -4.65], target: [7, 6.35] },
-      { home: [-7, -2], target: [5.7, 4.3] },
-      { home: [6.85, 1.55], target: [-6.7, 7] },
+      { home: [-5.8, -4.65], via: [[-2.66, -4.65], [-2.66, 4.6]], target: [-6.6, 4.6] },
+      { home: [5.8, -4.65], via: [[2.74, -4.65], [2.74, 6.35]], target: [7, 6.35] },
+      { home: [-7, -2], via: [[-2.3, -2], [-2.3, 4.3]], target: [5.7, 4.3] },
+      { home: [6.85, 1.55], via: [[2.39, 1.55], [2.39, 7]], target: [-6.7, 7] },
     ],
     exitMessage: "Второй трос доступен",
   },
@@ -136,9 +136,22 @@ export const bossArena = {
 };
 export const treasure = new Vector3(gate.x, gate.y, 290);
 
+export const checkpointChoices = [
+  { label: "Старт · Нижние кубики", position: spawn },
+  { label: "Бой на полу", position: arenas[0].checkpoint },
+  { label: "Нижний склад", position: crateCourses[0].restart },
+  { label: "Бой на полке", position: arenas[1].checkpoint },
+  { label: "Площадка после первого троса", position: ziplines[0].end },
+  { label: "Второй этаж · Прыжки", position: lifts[1].arrival },
+  { label: "Бой на втором этаже", position: arenas[2].checkpoint },
+  { label: "Верхний склад", position: crateCourses[1].restart },
+  { label: "Кошачья мозаика", position: ziplines[1].end },
+  { label: "Свечной лабиринт", position: maze.checkpoint },
+  { label: "Хранитель", position: bossArena.checkpoint },
+] as const;
+
 export const coinSpots: readonly XYZ[] = [
   [0, 0, 2.2], [0.3, 0, 4.9],
-  ...jumpBlocks.map(([x, y, z]): XYZ => [x, y, z]),
   [0, 0, 27.8], [0, 0, 31.2], [-2.5, 0, 38.2], [-5.3, 0, 42], [-7, 0, 46.6], [-7, 0, 50],
   [-7, 0, 53.55], [-7, 0, 67.5], [-7, 0, 71.8], [-7, 0, 75],
   [-7, 10.8, 78.6], [-7, 10.8, 82.7], [-8.7, 10.8, 90], [-10, 10.8, 93.4],
