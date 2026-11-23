@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#10101d" />
+    <link rel="manifest" href="/robot-game/dev/game.webmanifest" />
+    <title>Рубеж</title>
+    <script type="module" crossorigin src="/robot-game/dev/assets/index-KMNe8Bb3.js"></script>
+    <link rel="modulepreload" crossorigin href="/robot-game/dev/assets/rolldown-runtime-DK3Fl9T5.js">
+    <link rel="modulepreload" crossorigin href="/robot-game/dev/assets/decorators-BOtej2xA.js">
+    <link rel="modulepreload" crossorigin href="/robot-game/dev/assets/observable-BmPG9gPP.js">
+    <link rel="modulepreload" crossorigin href="/robot-game/dev/assets/typeStore-Cu_sj2zM.js">
+    <link rel="modulepreload" crossorigin href="/robot-game/dev/assets/performanceConfigurator-BmjQrsSV.js">
+    <link rel="modulepreload" crossorigin href="/robot-game/dev/assets/math.scalar.functions-Bcxiuh2E.js">
+    <link rel="modulepreload" crossorigin href="/robot-game/dev/assets/math.vector-Ct6Oc_tm.js">
+    <link rel="modulepreload" crossorigin href="/robot-game/dev/assets/guid-BXdVC_j_.js">
+    <link rel="modulepreload" crossorigin href="/robot-game/dev/assets/precisionDate-CfCevjl-.js">
+    <link rel="modulepreload" crossorigin href="/robot-game/dev/assets/logger-CuBYPcDK.js">
+    <link rel="modulepreload" crossorigin href="/robot-game/dev/assets/devTools-DmD3AOL3.js">
+    <link rel="modulepreload" crossorigin href="/robot-game/dev/assets/webRequest-dqz0dHXK.js">
+    <link rel="modulepreload" crossorigin href="/robot-game/dev/assets/shaderStore-D-XQlhUT.js">
+    <link rel="modulepreload" crossorigin href="/robot-game/dev/assets/abstractEngine-D96vBddz.js">
+    <link rel="modulepreload" crossorigin href="/robot-game/dev/assets/tools-5_wp_RhL.js">
+    <link rel="modulepreload" crossorigin href="/robot-game/dev/assets/math.color-DEkuF3wJ.js">
+    <link rel="modulepreload" crossorigin href="/robot-game/dev/assets/decorators.serialization-BNFeUGZZ.js">
+    <link rel="modulepreload" crossorigin href="/robot-game/dev/assets/math.plane-BDm7EIUd.js">
+    <link rel="modulepreload" crossorigin href="/robot-game/dev/assets/texture-DMDcjeD3.js">
+    <link rel="modulepreload" crossorigin href="/robot-game/dev/assets/dataBuffer-C-wqV4qF.js">
+    <link rel="modulepreload" crossorigin href="/robot-game/dev/assets/buffer-DfOg1Czm.js">
+    <link rel="modulepreload" crossorigin href="/robot-game/dev/assets/renderingManager-3gJ1HY_5.js">
+    <link rel="modulepreload" crossorigin href="/robot-game/dev/assets/lightConstants-_xsYUOSS.js">
+    <link rel="modulepreload" crossorigin href="/robot-game/dev/assets/postprocess.vertex-CqEQ0GqR.js">
+    <link rel="modulepreload" crossorigin href="/robot-game/dev/assets/postprocess.vertex-3K0axN5Y.js">
+    <link rel="modulepreload" crossorigin href="/robot-game/dev/assets/effectRenderer-BQhfkP9G.js">
+    <link rel="modulepreload" crossorigin href="/robot-game/dev/assets/thinEngine-CxBbUxVJ.js">
+    <link rel="modulepreload" crossorigin href="/robot-game/dev/assets/math.axis-BFQs_hWo.js">
+    <link rel="modulepreload" crossorigin href="/robot-game/dev/assets/math.path-CkUQMaUZ.js">
+    <link rel="modulepreload" crossorigin href="/robot-game/dev/assets/textureTools-DrFVRraZ.js">
+    <link rel="modulepreload" crossorigin href="/robot-game/dev/assets/dumpTools-BLVCvKgh.js">
+    <link rel="modulepreload" crossorigin href="/robot-game/dev/assets/cubemapToSphericalPolynomial-BKMlQLo0.js">
+    <link rel="modulepreload" crossorigin href="/robot-game/dev/assets/webAudioBaseSubGraph-BIrBBO2D.js">
+    <link rel="modulepreload" crossorigin href="/robot-game/dev/assets/abstractSoundSource-9hicha-7.js">
+    <link rel="modulepreload" crossorigin href="/robot-game/dev/assets/flowGraphBlock-Cu-qxVpF.js">
+    <link rel="modulepreload" crossorigin href="/robot-game/dev/assets/flowGraphExecutionBlock-DPcSTdHo.js">
+    <link rel="modulepreload" crossorigin href="/robot-game/dev/assets/flowGraphExecutionBlockWithOutSignal-Dwf3sCiX.js">
+    <link rel="stylesheet" crossorigin href="/robot-game/dev/assets/index-BMcAqEwD.css">
+  </head>
+  <body>
+    <main class="viewport">
+      <canvas id="scene" tabindex="-1" aria-label="Трёхмерный уровень с платформами"></canvas>
+
+      <header class="overlay">
+        <div class="mission">
+          <h1>Рубеж</h1>
+          <p id="objective" role="status">Перепрыгните по кубам</p>
+          <div id="boss-health" class="boss-health" hidden>
+            <label for="boss-meter">Хранитель</label>
+            <progress id="boss-meter" max="6" value="6"></progress>
+          </div>
+        </div>
+        <div class="hud">
+          <div class="counters">
+            <span id="health" class="health" aria-label="Здоровье 3 из 3">♥♥♥</span>
+            <span class="counter"><span class="coin-icon" aria-hidden="true"></span><span id="coins" aria-label="Монеты: 0">0</span></span>
+            <span class="counter stars"><span aria-hidden="true">★</span><span id="stars" aria-label="Звёзды: 0 из 3">0 / 3</span></span>
+          </div>
+          <div class="overlay-actions">
+            <button id="lessons" class="primary" type="button">Уроки</button>
+            <button id="checkpoints" type="button" aria-haspopup="dialog" aria-controls="checkpoint-menu">Чекпоинты</button>
+            <button id="travel-journal-button" type="button" aria-label="Дневник путешествий" aria-haspopup="dialog" aria-controls="travel-journal">Дневник</button>
+            <button id="restart" class="icon-button" type="button" aria-label="Заново" title="Заново (R)">↻</button>
+            <button id="fullscreen" class="icon-button" type="button" aria-label="На весь экран" hidden>⛶</button>
+            <p id="fullscreen-status" role="status"></p>
+          </div>
+        </div>
+      </header>
+
+      <div class="context">
+        <p id="feedback" role="status" hidden></p>
+        <button id="interact" type="button" hidden><kbd>E</kbd><span></span></button>
+      </div>
+
+      <div class="keyboard-guide" aria-label="Управление">
+        <span><kbd>WASD</kbd> Движение</span>
+        <span><kbd>Пробел</kbd> Прыжок</span>
+        <span><kbd>ЛКМ</kbd> Удар</span>
+      </div>
+
+      <div class="touch-controls">
+        <div id="stick" aria-hidden="true"><span></span></div>
+        <div class="touch-actions">
+          <button id="attack" type="button">Удар</button>
+          <button id="jump" type="button">Прыжок</button>
+        </div>
+      </div>
+
+      <section id="result" class="result" aria-labelledby="result-title" hidden>
+        <h2 id="result-title">Уровень пройден</h2>
+        <p id="result-coins"></p>
+        <button id="play-again" class="primary" type="button">Играть снова</button>
+      </section>
+
+      <dialog id="activity" aria-labelledby="activity-title" aria-describedby="activity-copy">
+        <div class="activity-heading">
+          <h2 id="activity-title">Уроки</h2>
+          <button id="close-activity" class="icon-button" type="button" aria-label="Закрыть">×</button>
+        </div>
+        <p id="activity-copy">Зачтите три урока, чтобы получить три звезды. Каждый урок пока заменён кнопкой.</p>
+        <div id="lesson-list"></div>
+      </dialog>
+
+      <dialog id="checkpoint-menu" aria-labelledby="checkpoint-title" aria-describedby="checkpoint-copy">
+        <div class="activity-heading">
+          <h2 id="checkpoint-title">Выбор чекпоинта</h2>
+          <button id="close-checkpoints" class="icon-button" type="button" aria-label="Закрыть">×</button>
+        </div>
+        <p id="checkpoint-copy">Выбранный участок начнётся заново. Монеты и звёзды сохранятся.</p>
+        <div id="checkpoint-list"></div>
+      </dialog>
+
+      <dialog id="librarian-dialog" class="travel-dialog" aria-labelledby="librarian-title" aria-describedby="librarian-fact librarian-reward">
+        <div class="activity-heading">
+          <h2 id="librarian-title">Библиотекарь</h2>
+          <button id="close-librarian" class="icon-button" type="button" aria-label="Закрыть диалог">×</button>
+        </div>
+        <p id="librarian-fact" class="travel-copy"></p>
+        <p id="librarian-reward" class="travel-reward"></p>
+        <button id="view-travel-card" class="primary" type="button">Открыть дневник</button>
+      </dialog>
+
+      <dialog id="travel-journal" class="travel-dialog" aria-labelledby="travel-journal-title">
+        <div class="activity-heading">
+          <h2 id="travel-journal-title">Дневник путешествий</h2>
+          <button id="close-travel-journal" class="icon-button" type="button" aria-label="Закрыть дневник">×</button>
+        </div>
+        <p id="travel-journal-empty" class="travel-copy">Карточек пока нет.</p>
+        <article id="himeji-card" class="travel-card" hidden>
+          <img id="himeji-photo" width="960" height="720" alt="Белые стены и многоярусные крыши замка Химэдзи">
+          <div class="travel-card-body">
+            <p class="travel-card-place">Япония · Хёго</p>
+            <h3>Замок Белой цапли</h3>
+            <p id="himeji-fact"></p>
+            <a href="https://www.japan.travel/en/world-heritage/himeji-jo-castle/" target="_blank" rel="noopener noreferrer">О замке Химэдзи</a>
+          </div>
+        </article>
+      </dialog>
+
+      <dialog id="cat-lock" class="puzzle-dialog" aria-labelledby="puzzle-title" aria-describedby="puzzle-instructions">
+        <header class="puzzle-heading">
+          <div class="puzzle-emblem" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+          <div>
+            <h2 id="puzzle-title">Кошачья мозаика</h2>
+            <p id="puzzle-instructions">Нажмите на плитку, которую хотите переместить, затем на плитку на нужном месте. Они поменяются местами. На клавиатуре перемещайтесь стрелками и выбирайте клавишей Enter.</p>
+          </div>
+          <button id="close-puzzle" class="icon-button" type="button" aria-label="Закрыть мозаику">×</button>
+        </header>
+        <div class="puzzle-layout">
+          <div class="puzzle-frame">
+            <div id="puzzle-board" class="puzzle-board" role="group" aria-label="Мозаика, 2 ряда по 4 плитки"></div>
+          </div>
+          <aside class="puzzle-sidebar">
+            <figure class="puzzle-reference">
+              <img id="puzzle-preview" width="1200" height="800" alt="Рыжий кот с зелёными глазами">
+              <figcaption>Образец</figcaption>
+            </figure>
+            <div class="puzzle-progress">
+              <p id="puzzle-status" role="status"></p>
+              <progress id="puzzle-progress" max="8" value="0" aria-label="Плитки на своих местах"></progress>
+            </div>
+          </aside>
+        </div>
+        <footer class="puzzle-actions">
+          <button id="shuffle-puzzle" type="button"><span aria-hidden="true">↻</span> Перемешать</button>
+          <button id="leave-puzzle" class="primary" type="button" hidden>Продолжить</button>
+        </footer>
+      </dialog>
+
+      <p id="scene-loading" role="status">Загрузка игры…</p>
+      <p id="scene-error" role="alert" hidden></p>
+    </main>
+  </body>
+</html>
