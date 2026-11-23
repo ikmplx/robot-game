@@ -1,6 +1,8 @@
 import himejiPhoto from "./assets/himeji-castle.jpg";
 
-const cardKey = "rubezh.travel-journal.himeji";
+const cardKey = import.meta.env.BASE_URL === "/robot-game/dev/"
+  ? "rubezh.dev.travel-journal.himeji"
+  : "rubezh.travel-journal.himeji";
 const fact = "В Японии замок Химэдзи прозвали замком Белой цапли. Его белые стены и многоярусные крыши напоминают цаплю, которая расправила крылья перед взлётом.";
 
 export function createTravelJournal(pauseGame: () => void, resumeGame: () => void, options: AddEventListenerOptions) {

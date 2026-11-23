@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build --base=./",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "deploy:dev": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/publish-pages.ps1 -Channel dev",
+    "deploy:stable": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/publish-pages.ps1 -Channel stable"
   },
   "dependencies": {
     "@babylonjs/core": "^8.0.0",
